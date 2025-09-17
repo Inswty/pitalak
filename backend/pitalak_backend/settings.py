@@ -65,9 +65,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'pitalak_backend.wsgi.application'
 
-TARGETSMS_LOGIN = os.getenv('TARGETSMS_LOGIN')
-TARGETSMS_PASSWORD = os.getenv('TARGETSMS_PASSWORD')
-TARGETSMS_SENDER = os.getenv('TARGETSMS_SENDER')
+SMS_PROVIDER_LOGIN = os.getenv('SMS_PROVIDER_LOGIN')
+SMS_PROVIDER_PASSWORD = os.getenv('SMS_PROVIDER_PASSWORD')
+SMS_PROVIDER_SENDER = os.getenv('SMS_PROVIDER_SENDER')
+SMS_PROVIDER_API_URL = os.getenv('SMS_PROVIDER_API_URL')
+
+OTP_LENGTH = 6
+OTP_TTL_SECONDS = 300  # 5 минут
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases

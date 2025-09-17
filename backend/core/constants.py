@@ -5,3 +5,4 @@ MAX_STR_LENGTH = 40
 MAX_UNIT_LENGTH = 16
 PRICE_DECIMAL_PLACES = 2    # Количество цифр после запятой
 OTP_LENGTH = 4
+OTP_TEXT = "Ваш код подтверждения: {otp}"
