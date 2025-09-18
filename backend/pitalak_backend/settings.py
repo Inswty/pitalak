@@ -72,7 +72,7 @@ OTP_TTL_SECONDS = 300  # 5 минут
 MAX_OTP_ATTEMPTS = 3
 MAX_OTP_REQUESTS_PER_HOUR = 3
 OTP_COOLDOWN_SECONDS = 60  # 1 минута между запросами
-OTP_TEXT = "Ваш код подтверждения: {otp}"
+OTP_TEXT = 'Ваш код подтверждения: {otp}'
 
 # Cache settings for OTP
 """
@@ -84,9 +84,9 @@ CACHES = {
 }
 """
 CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "unique",
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique',
     }
 }
 
@@ -125,10 +125,16 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
-    'AUTH_HEADER_TYPES': ('Bearer',),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
 }
 
+DJOSER = {
+    'USER_CREATE_PASSWORD_RETYPE': False,
+    'SEND_ACTIVATION_EMAIL': False,
+    'LOGIN_FIELD': 'phone',
+}
 
 # Internationalization
 LANGUAGE_CODE = 'ru-RU'
@@ -148,46 +154,45 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # Настройки логирования
-# Создаем папку для логов если ее нет
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
 os.makedirs(LOG_DIR, exist_ok=True)
 if DEBUG:
     LOGGING = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "handlers": {
-            "file": {
-                "level": "DEBUG",
-                "class": "logging.FileHandler",
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'file': {
+                'level': 'DEBUG',
+                'class': 'logging.FileHandler',
                 'filename': os.path.join(BASE_DIR, 'logs', 'main.log'),
-                "formatter": "verbose",
-                "encoding": "utf-8",
+                'formatter': 'verbose',
+                'encoding': 'utf-8',
             },
         },
-        "formatters": {
-            "verbose": {
-                "format": "[{asctime}] {levelname} {name}: {message}",
-                "style": "{",
-                "datefmt": "%d-%m-%Y %H:%M:%S",
+        'formatters': {
+            'verbose': {
+                'format': '[{asctime}] {levelname} {name}: {message}',
+                'style': '{',
+                'datefmt': '%d-%m-%Y %H:%M:%S',
             },
         },
-        "root": {
-            "handlers": ["file"],
-            "level": "DEBUG",
+        'root': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
         },
     }
 else:
     LOGGING = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "handlers": {
-            "db": {
-                "level": "INFO",
-                "class": "django_db_logger.db_log_handler.DatabaseLogHandler",
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'db': {
+                'level': 'INFO',
+                'class': 'django_db_logger.db_log_handler.DatabaseLogHandler',
             },
         },
-        "root": {
-            "handlers": ["db"],
-            "level": "INFO",
+        'root': {
+            'handlers': ['db'],
+            'level': 'INFO',
         },
     }
