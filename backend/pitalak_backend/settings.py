@@ -2,24 +2,19 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+from dotenv import load_dotenv
+
+load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
 AUTH_USER_MODEL = 'users.User'
-
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -31,6 +26,7 @@ INSTALLED_APPS = [
     'phonenumber_field',
     'rest_framework',
     'djoser',
+    'django_db_logger',
     'api.apps.ApiConfig',
     'users.apps.UsersConfig',
     'products.apps.productsConfig',
@@ -65,17 +61,36 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'pitalak_backend.wsgi.application'
 
+# OTP settings
 SMS_PROVIDER_LOGIN = os.getenv('SMS_PROVIDER_LOGIN')
 SMS_PROVIDER_PASSWORD = os.getenv('SMS_PROVIDER_PASSWORD')
 SMS_PROVIDER_SENDER = os.getenv('SMS_PROVIDER_SENDER')
 SMS_PROVIDER_API_URL = os.getenv('SMS_PROVIDER_API_URL')
 
-OTP_LENGTH = 6
+OTP_LENGTH = 4
 OTP_TTL_SECONDS = 300  # 5 минут
+MAX_OTP_ATTEMPTS = 3
+MAX_OTP_REQUESTS_PER_HOUR = 3
+OTP_COOLDOWN_SECONDS = 60  # 1 минута между запросами
+OTP_TEXT = "Ваш код подтверждения: {otp}"
+
+# Cache settings for OTP
+"""
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+    }
+}
+"""
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique",
+    }
+}
 
 # Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -85,8 +100,6 @@ DATABASES = {
 
 
 # Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -118,8 +131,6 @@ SIMPLE_JWT = {
 
 
 # Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
 LANGUAGE_CODE = 'ru-RU'
 
 TIME_ZONE = 'Asia/Yekaterinburg'
@@ -130,11 +141,53 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
 STATIC_URL = 'static/'
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Настройки логирования
+# Создаем папку для логов если ее нет
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+if DEBUG:
+    LOGGING = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "handlers": {
+            "file": {
+                "level": "DEBUG",
+                "class": "logging.FileHandler",
+                'filename': os.path.join(BASE_DIR, 'logs', 'main.log'),
+                "formatter": "verbose",
+                "encoding": "utf-8",
+            },
+        },
+        "formatters": {
+            "verbose": {
+                "format": "[{asctime}] {levelname} {name}: {message}",
+                "style": "{",
+                "datefmt": "%d-%m-%Y %H:%M:%S",
+            },
+        },
+        "root": {
+            "handlers": ["file"],
+            "level": "DEBUG",
+        },
+    }
+else:
+    LOGGING = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "handlers": {
+            "db": {
+                "level": "INFO",
+                "class": "django_db_logger.db_log_handler.DatabaseLogHandler",
+            },
+        },
+        "root": {
+            "handlers": ["db"],
+            "level": "INFO",
+        },
+    }

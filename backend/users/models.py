@@ -60,4 +60,4 @@ class User(AbstractUser):
         ordering = ('phone',)
 
     def __str__(self):
-        return f'{self.phone} ({self.name or ""})'[:MAX_STR_LENGTH]
+        return f'{self.phone} {self.name or ""}'[:MAX_STR_LENGTH]
