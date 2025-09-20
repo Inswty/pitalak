@@ -28,8 +28,10 @@ INSTALLED_APPS = [
     'djoser',
     'django_db_logger',
     'api.apps.ApiConfig',
+    'core.apps.CoreConfig',
+    'orders.apps.OrdersConfig',
+    'products.apps.ProductsConfig',
     'users.apps.UsersConfig',
-    'products.apps.productsConfig',
 ]
 
 MIDDLEWARE = [
@@ -70,23 +72,19 @@ SMS_PROVIDER_API_URL = os.getenv('SMS_PROVIDER_API_URL')
 OTP_LENGTH = 4
 OTP_TTL_SECONDS = 300  # 5 минут
 MAX_OTP_ATTEMPTS = 3
-MAX_OTP_REQUESTS_PER_HOUR = 3
+MAX_OTP_REQUESTS_PER_HOUR = int(os.getenv("MAX_OTP_REQUESTS_PER_HOUR", 3))
 OTP_COOLDOWN_SECONDS = 60  # 1 минута между запросами
 OTP_TEXT = 'Ваш код подтверждения: {otp}'
 
 # Cache settings for OTP
-"""
+REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/1',
-    }
-}
-"""
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique',
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{REDIS_HOST}:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
     }
 }
 
@@ -184,7 +182,7 @@ if DEBUG:
 else:
     LOGGING = {
         'version': 1,
-        'disable_existing_loggers': False,
+        'disable_existing_loggers': True,
         'handlers': {
             'db': {
                 'level': 'INFO',
