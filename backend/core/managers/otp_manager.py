@@ -1,86 +1,157 @@
 import logging
 import secrets
 import string
+from typing import Tuple
 
+from contextlib import contextmanager
 from django.conf import settings
-from django.core.cache import cache
-from django.utils.timezone import now
+from django_redis import get_redis_connection
+from rest_framework.exceptions import Throttled
+from redis.exceptions import ConnectionError, RedisError
+
 
 logger = logging.getLogger(__name__)
 
 
 class OTPManager:
-    """Менеджер для работы с OTP."""
+    """Унифицированный менеджер для работы с OTP и ограничениями."""
 
     @staticmethod
-    def generate_otp():
-        """Безопасная генерация OTP"""
-        opt = ''.join(
+    @contextmanager
+    def redis_conn():
+        conn = get_redis_connection('default')
+        try:
+            yield conn
+        except (ConnectionError, RedisError) as e:
+            logger.error('Redis error: %s', e)
+            raise Throttled(detail='Системная ошибка. Попробуйте позже.')
+
+    @staticmethod
+    def generate_otp() -> str:
+        otp = ''.join(
             secrets.choice(string.digits) for _ in range(settings.OTP_LENGTH)
         )
-        logger.debug('Сгенерирован OTP: %s', opt)
-        return opt
+        logger.debug('Сгенерирован OTP: %s', otp)
+        return otp
 
-    @staticmethod
-    def get_cache_key(phone):
-        return f'otp_{phone}'
-
-    @staticmethod
-    def save_otp(phone, otp):
-        cache_key = OTPManager.get_cache_key(phone)
-        cache_data = {
-            'otp': otp,
-            'attempts': 0,
-            'created_at': now().isoformat()
+    # Ключи для Redis
+    @classmethod
+    def _get_keys(cls, phone):
+        return {
+            'otp': f'otp_{phone}',
+            'rate': f'otp_rate_{phone}',
+            'cooldown': f'otp_last_request_{phone}',
         }
 
-        cache.set(cache_key, cache_data, timeout=settings.OTP_TTL_SECONDS)
-        logger.info(
-            'OTP сохранен для телефона: %s, TTL: %s сек, attempts: 0',
-            phone, settings.OTP_TTL_SECONDS
-        )
-        logger.debug('Данные OTP: %s', cache_data)
+    @classmethod
+    def can_send_otp(cls, phone):
+        """Проверка лимита и кулдауна."""
+        keys = cls._get_keys(phone)
+        with cls.redis_conn() as conn:
+            # Атомарно проверяем оба условия
+            pipe = conn.pipeline()
+            pipe.get(keys['rate'])
+            pipe.ttl(keys['rate'])
+            pipe.ttl(keys['cooldown'])
+            count, rate_ttl, cooldown_ttl = pipe.execute()
+            count = int(count or 0)
+            # Hourly rate
+            if count >= settings.MAX_OTP_REQUESTS_PER_HOUR:
+                minutes = (rate_ttl + 59) // 60
+                logger.warning('Превышен лимит OTP для %s, '
+                               'блокировка на %s мин.', phone, minutes)
+                raise Throttled(
+                    detail=f'Превышен лимит запросов. '
+                    f'Попробуйте через {minutes} минут.'
+                )
+            # Cooldown
+            if cooldown_ttl > 0:
+                logger.warning(
+                    'Кулдаун активен для %s, '
+                    'осталось %s сек.', phone, cooldown_ttl
+                )
+                raise Throttled(
+                    detail=f'Подождите {cooldown_ttl} секунд '
+                    f'перед следующим запросом.'
+                )
 
-    @staticmethod
-    def verify_otp(phone, user_otp):
-        cache_key = OTPManager.get_cache_key(phone)
-        data = cache.get(cache_key)
+    @classmethod
+    def register_otp_request(cls, phone: str) -> None:
+        """Регистрирует отправку OTP (увеличивает счетчики)."""
+        keys = cls._get_keys(phone)
+        with cls.redis_conn() as conn:
+            # Безопасно создаем ключ с TTL, если его нет,
+            # Иначе просто увеличиваем
+            if not conn.set(keys['rate'], 1, ex=3600, nx=True):
+                conn.incr(keys['rate'])
+            conn.set(keys['cooldown'], 1, ex=settings.OTP_COOLDOWN_SECONDS)
 
-        if not data:
-            logger.warning(
-                'Попытка верификации OTP для %s: OTP не найден или истек',
-                phone
-            )
-            return False, 'OTP не найден или истек'
-        # Логируем текущее состояние
-        logger.debug(
-            'Верификация OTP для %s: attempts=%s, created_at=%s',
-            phone, data['attempts'], data['created_at']
-        )
+    @classmethod
+    def save_otp(cls, phone: str, otp: str) -> None:
+        """Сохраняет OTP в Redis."""
+        keys = cls._get_keys(phone)
+        with cls.redis_conn() as conn:
+            try:
+                conn.hset(keys['otp'], mapping={'otp': otp, 'attempts': '0'})
+                conn.expire(keys['otp'], settings.OTP_TTL_SECONDS)
+                logger.info('OTP сохранен для телефона: %s, TTL: %s сек',
+                            phone, settings.OTP_TTL_SECONDS)
+            except (ConnectionError, RedisError) as e:
+                logger.error('Ошибка сохранения OTP для %s: %s', phone, e)
+                raise
 
-        if data['attempts'] >= settings.MAX_OTP_ATTEMPTS:
-            cache.delete(cache_key)
-            logger.warning(
-                'Превышено количество попыток для телефона %s. OTP удален.',
-                phone
-            )
-            return False, 'Превышено количество попыток'
-        data['attempts'] += 1
-        cache.set(cache_key, data, timeout=settings.OTP_TTL_SECONDS)
-        logger.info(
-            'Попытка верификации #%s для телефона %s',
-            data['attempts'], phone
-        )
-        # Безопасное сравнение
-        if secrets.compare_digest(str(data['otp']), str(user_otp)):
-            cache.delete(cache_key)
-            logger.info(
-                'Успешная верификация OTP для телефона %s',
-                phone
-            )
-            return True, 'Успешно'
-        logger.warning(
-            'Неверный OTP для телефона %s. Осталось попыток: %s',
-            phone, settings.MAX_OTP_ATTEMPTS - data['attempts']
-        )
-        return False, 'Неверный OTP'
+    @classmethod
+    def verify_otp(cls, phone: str, user_otp: str) -> Tuple[bool, str]:
+        """Верификация OTP с учетом количества попыток."""
+        keys = cls._get_keys(phone)
+        with cls.redis_conn() as conn:
+            try:
+                if not conn.exists(keys['otp']):
+                    logger.warning('OTP не найден или истек для телефона %s',
+                                   phone)
+                    return False, 'OTP не найден или истек'
+                # Атомарно увеличиваем attempts и получаем его новое значение
+                attempts = conn.hincrby(keys['otp'], 'attempts', 1)
+                stored_otp = conn.hget(keys['otp'], 'otp')
+                if not stored_otp:
+                    logger.error('Некорректные данные OTP для %s', phone)
+                    return False, 'Системная ошибка'
+                # Проверяем количество попыток верификации
+                if attempts >= settings.MAX_OTP_ATTEMPTS:
+                    conn.delete(keys['otp'])
+                    logger.warning(
+                        'Превышено количество попыток верификации '
+                        'для номера %s', phone
+                    )
+                    return False, 'Превышено количество попыток'
+                # Проверяем OTP
+                if secrets.compare_digest(stored_otp.decode(), user_otp):
+                    conn.delete(keys['otp'])
+                    logger.info('Успешная верификация OTP для телефона %s',
+                                phone)
+                    return True, 'Успешно'
+                # После неудачной попытки
+                remaining_attempts = settings.MAX_OTP_ATTEMPTS - attempts
+                if remaining_attempts == 0:
+                    # Это была последняя попытка - удаляем OTP
+                    conn.delete(keys['otp'])
+                    return False, 'Превышено количество попыток'
+                logger.warning('Неверный OTP для %s. Осталось попыток: %s',
+                               phone, remaining_attempts)
+                return (False, f'Неверный OTP. Осталось попыток: '
+                        f'{remaining_attempts}')
+            except (ConnectionError, RedisError) as e:
+                logger.error('Ошибка верификации OTP для %s: %s', phone, e)
+                return False, 'Системная ошибка'
+
+    @classmethod
+    def request_otp(cls, phone: str) -> str:
+        """Полный процесс запроса OTP с проверкой лимитов."""
+        # Проверяем лимиты
+        cls.can_send_otp(phone)
+        # Генерируем OTP
+        otp = OTPManager.generate_otp()
+        # Регистрируем запрос и сохраняем OTP
+        cls.register_otp_request(phone)
+        cls.save_otp(phone, otp)
+        return otp
