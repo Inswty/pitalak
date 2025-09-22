@@ -2,8 +2,8 @@ import logging
 import secrets
 import string
 from typing import Tuple
-
 from contextlib import contextmanager
+
 from django.conf import settings
 from django_redis import get_redis_connection
 from rest_framework.exceptions import Throttled
@@ -61,6 +61,7 @@ class OTPManager:
                 logger.warning('Превышен лимит OTP для %s, '
                                'блокировка на %s мин.', phone, minutes)
                 raise Throttled(
+                    wait=rate_ttl,
                     detail=f'Превышен лимит запросов. '
                     f'Попробуйте через {minutes} минут.'
                 )
@@ -71,6 +72,7 @@ class OTPManager:
                     'осталось %s сек.', phone, cooldown_ttl
                 )
                 raise Throttled(
+                    wait=cooldown_ttl,
                     detail=f'Подождите {cooldown_ttl} секунд '
                     f'перед следующим запросом.'
                 )
@@ -116,14 +118,6 @@ class OTPManager:
                 if not stored_otp:
                     logger.error('Некорректные данные OTP для %s', phone)
                     return False, 'Системная ошибка'
-                # Проверяем количество попыток верификации
-                if attempts >= settings.MAX_OTP_ATTEMPTS:
-                    conn.delete(keys['otp'])
-                    logger.warning(
-                        'Превышено количество попыток верификации '
-                        'для номера %s', phone
-                    )
-                    return False, 'Превышено количество попыток'
                 # Проверяем OTP
                 if secrets.compare_digest(stored_otp.decode(), user_otp):
                     conn.delete(keys['otp'])

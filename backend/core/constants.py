@@ -4,4 +4,3 @@ MAX_PRICE_DIGITS = 10
 MAX_STR_LENGTH = 40
 MAX_UNIT_LENGTH = 16
 PRICE_DECIMAL_PLACES = 2    # Количество цифр после запятой
-
