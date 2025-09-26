@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 
 from core.constants import MAX_STR_LENGTH
@@ -61,3 +62,40 @@ class User(AbstractUser):
 
     def __str__(self):
         return f'{self.phone} ♦ {self.name or ""}'[:MAX_STR_LENGTH]
+
+
+class Address(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='addresses',
+        verbose_name='Пользователь'
+    )
+    locality = models.CharField(
+        'Населённый пункт', default='Тюмень', max_length=255
+    )
+    street = models.CharField('Улица', max_length=255)
+    house = models.CharField('Дом', max_length=20)
+    flat = models.CharField('Квартира', max_length=10, blank=True, null=True)
+    floor = models.CharField('Этаж', max_length=10, blank=True, null=True)
+    added = models.DateTimeField('Добавлен', auto_now_add=True)
+
+    is_primary = models.BooleanField("Основной", default=False)
+
+    def save(self, *args, **kwargs):
+        # если этот адрес отмечается как основной — сбрасываем у остальных
+        if self.is_primary:
+            Address.objects.filter(
+                user=self.user, is_primary=True).update(is_primary=False)
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = 'Адрес'
+        verbose_name_plural = 'Адреса'
+        ordering = ('-added',)
+
+    def __str__(self):
+        parts = [self.locality, self.street, f'д. {self.house}']
+        if self.flat:
+            parts.append(f'кв. {self.flat}')
+        return ', '.join(parts)

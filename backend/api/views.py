@@ -28,7 +28,7 @@ class SendOTPAPIView(APIView):
         try:
             otp = OTPManager.request_otp(phone)
         except Throttled as e:
-            # Вернем статус 429 с wait
+            # Вернем 429 с wait
             return Response(
                 {'detail': e.detail, 'wait': e.wait},
                 status=status.HTTP_429_TOO_MANY_REQUESTS
@@ -67,7 +67,6 @@ class VerifyOTPAPIView(APIView):
 
         is_valid, message = OTPManager.verify_otp(phone, otp)
         if not is_valid:
-            # Ошибка валидации (например, неверный OTP или превышен лимит)
             raise ValidationError({'detail': message})
 
         user = self._get_or_create_user(phone)
