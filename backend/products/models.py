@@ -2,9 +2,25 @@ from django.db import models
 from django.core.validators import MinValueValidator
 
 from core.constants import (
-    MAX_CHAR_LENGTH, MAX_INGREDIENT_LENGTH, MAX_PRICE_DIGITS, MAX_STR_LENGTH,
-    MAX_UNIT_LENGTH, PRICE_DECIMAL_PLACES
+    MAX_CHAR_LENGTH, MAX_INGREDIENT_LENGTH, MAX_PRICE_DIGITS, MAX_SLUG_LENGTH,
+    MAX_STR_LENGTH, MAX_UNIT_LENGTH, PRICE_DECIMAL_PLACES
 )
+
+
+class Category(models.Model):
+    name = models.CharField('Название', max_length=MAX_CHAR_LENGTH)
+    slug = models.SlugField('Слаг', unique=True, max_length=MAX_SLUG_LENGTH)
+    is_available = models.BooleanField(
+        default=True, verbose_name='Доступен',
+        help_text='Снимите галю, чтобы скрыть скрыть категорию.')
+
+    class Meta:
+        verbose_name = 'категория'
+        verbose_name_plural = 'Категории'
+        ordering = ('name',)
+
+    def __str__(self):
+        return self.name[:MAX_STR_LENGTH]
 
 
 class Nutrient(models.Model):
@@ -14,6 +30,10 @@ class Nutrient(models.Model):
     measurement_unit = models.CharField(
         'Единица измерения',
         max_length=MAX_UNIT_LENGTH
+    )
+    rda = models.FloatField(
+        'РСП', null=True, blank=True,
+        help_text='Рекомендуемая суточная потребность'
     )
 
     class Meta:
@@ -28,15 +48,19 @@ class Ingredient(models.Model):
     """Ингредиент, входящий в состав продукта."""
 
     name = models.CharField('Название', max_length=MAX_INGREDIENT_LENGTH)
+    proteins = models.FloatField('Белки', default=0,)
+    fats = models.FloatField('Жиры', default=0)
+    carbs = models.FloatField('Углеводы', default=0)
     nutrients = models.ManyToManyField(
         Nutrient,
         through='NutrientInIngredient',
-        verbose_name='Ингредиенты',
+        verbose_name='Нутриент',
         help_text='Выберите нутриенты и укажите их количество'
     )
-    energy_value = models.PositiveIntegerField(
-        help_text='Энергетическая ценность на 100 г, ккал',
-    )
+
+    @property
+    def energy_value(self):
+        return int(self.proteins * 4 + self.fats * 9 + self.carbs * 4)
 
     class Meta:
         verbose_name = 'ингредиент'
@@ -49,18 +73,48 @@ class Ingredient(models.Model):
 class Product(models.Model):
     """Продукт с фото и описанием."""
 
+    class NutritionMode(models.TextChoices):
+        NONE = 'none', 'Без БЖУ'
+        AUTO = 'auto', 'Рассчитать из ингредиентов'
+        MANUAL = 'manual', 'Ввести вручную'
+
     name = models.CharField('Название', max_length=MAX_CHAR_LENGTH)
+    nutrition_mode = models.CharField(
+        max_length=10,
+        choices=NutritionMode.choices,
+        default=NutritionMode.NONE,
+    )
+    proteins = models.FloatField('Белки', default=0,)
+    fats = models.FloatField('Жиры', default=0)
+    carbs = models.FloatField('Углеводы', default=0)
+    energy_value = models.PositiveIntegerField(
+        'Энергетическая ценность',
+        help_text='Энергетическая ценность продукта, ккал',
+    )
     description = models.TextField('Описание', blank=True, null=True)
-    image = models.ImageField('Фото', upload_to='images')
+    image = models.ImageField(
+        'Фото', upload_to='images', blank=True, null=True
+    )
     ingredients = models.ManyToManyField(
         Ingredient,
         through='IngredientInProduct',
         verbose_name='Ингредиенты',
         help_text='Выберите ингредиенты и укажите их количество'
     )
-    energy_value = models.PositiveIntegerField(
-        help_text='Энергетическая ценность продукта, ккал',
+    weight = models.FloatField(
+        help_text='Вес (гр.)',
+        blank=True, null=True
     )
+
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name='products',
+        verbose_name='Категория'
+    )
+    is_available = models.BooleanField(
+        default=True, verbose_name='Доступен',
+        help_text='Снимите галю, чтобы скрыть товар.')
     price = models.DecimalField(
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES,
