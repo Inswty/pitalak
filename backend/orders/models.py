@@ -15,29 +15,47 @@ class ShoppingCart(models.Model):
         related_name='cart',
         verbose_name='Покупатель'
     )
-    product = models.ForeignKey(
+    products = models.ManyToManyField(
         Product,
-        on_delete=models.CASCADE,
-        related_name='in_carts',
-        verbose_name='Продукт'
-    )
-    quantity = models.PositiveIntegerField(
-        default=1,
-        verbose_name='Количество'
+        through='CartItem',
+        related_name='carts',
+        verbose_name='Продукты'
     )
 
     class Meta:
         verbose_name = 'Корзина'
         verbose_name_plural = 'Корзины'
-        constraints = (
-            models.UniqueConstraint(
-                fields=('user', 'product'),
-                name='unique_product_in_user'
-            ),
-        )
 
     def __str__(self):
-        return f'{self.user} → {self.product} ({self.quantity})'
+        return f'Корзина {self.user}'
+
+
+class CartItem(models.Model):
+    """Товар в корзине."""
+
+    cart = models.ForeignKey(
+        ShoppingCart,
+        on_delete=models.CASCADE,
+        related_name='items'
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE
+    )
+    quantity = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        verbose_name = 'Позиция в корзине'
+        verbose_name_plural = 'Позиции в корзинах'
+        constraints = [
+            models.UniqueConstraint(
+                fields=('cart', 'product'),
+                name='unique_product_in_cart'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.product} × {self.quantity}'
 
 
 class Order(models.Model):
@@ -55,9 +73,8 @@ class Order(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='orders',
-        verbose_name='Пользователь'
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField('Создан', auto_now_add=True)
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -66,20 +83,19 @@ class Order(models.Model):
     total_price = models.DecimalField(
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES,
-        default=0.00
     )
 
     class Meta:
-        ordering = ('-created_at',)
         verbose_name = 'Заказ'
         verbose_name_plural = 'Заказы'
+        ordering = ('-created_at',)
 
     def __str__(self):
-        return f'Заказ #{self.id} ({self.user})'
+        return f'Заказ # {self.order_number} ({self.user})'
 
 
 class OrderItem(models.Model):
-    """Связь заказа и продуктов (многие-ко-многим)."""
+    """Позиция в заказе."""
 
     order = models.ForeignKey(
         Order,
@@ -87,14 +103,15 @@ class OrderItem(models.Model):
         related_name='items'
     )
     product = models.ForeignKey(
-        'products.Product',
-        on_delete=models.CASCADE
+        Product,
+        on_delete=models.CASCADE,
+        related_name='order_items'
     )
     quantity = models.PositiveIntegerField(default=1)
-    price = models.DecimalField(  # цена на момент покупки
+    price = models.DecimalField(
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES
     )
 
     def __str__(self):
-        return f'{self.product} x {self.quantity}'
+        return f'{self.product} × {self.quantity}'
