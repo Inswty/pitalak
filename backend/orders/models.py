@@ -1,5 +1,8 @@
+from decimal import Decimal
+
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 from core.constants import MAX_PRICE_DIGITS, PRICE_DECIMAL_PLACES
 from products.models import Product
@@ -69,10 +72,21 @@ class Order(models.Model):
         ('canceled', 'Отменён'),
     ]
 
+    order_number = models.CharField(
+        'Номер заказа', max_length=10, unique=True, editable=False
+    )
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='orders',
+        verbose_name='Заказчик'
+    )
+    products = models.ManyToManyField(
+        Product,
+        through='OrderItem',
+        related_name='orders',
+        verbose_name='Продукты'
     )
     created_at = models.DateTimeField('Создан', auto_now_add=True)
     status = models.CharField(
@@ -81,9 +95,52 @@ class Order(models.Model):
         default='new'
     )
     total_price = models.DecimalField(
+        'Сумма',
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES,
+        default=Decimal('0.00')
     )
+    address = models.ForeignKey(
+        'users.Address',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='orders',
+        verbose_name='Адрес доставки'
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.order_number:
+            self.order_number = self.generate_order_number()
+        super().save(*args, **kwargs)
+
+    def add_product(self, product, quantity, price):
+        item, created = OrderItem.objects.get_or_create(
+            order=self, product=product,
+            defaults={'quantity': quantity, 'price': price}
+        )
+        if not created:
+            item.quantity += quantity
+            item.save(update_fields=['quantity'])
+        self.update_total_price()
+        return item
+
+    def update_total_price(self):
+        self.total_price = sum(
+            (item.price * item.quantity for item in self.items.all()),
+            start=Decimal('0.00')
+        )
+        self.save(update_fields=['total_price'])
+
+    def generate_order_number(self):
+        current_year = timezone.now().year % 100
+        last_order = Order.objects.filter(
+            order_number__startswith=f'{current_year}'
+        ).order_by('id').last()
+        if last_order:
+            last_number = int(last_order.order_number[2:])
+        else:
+            last_number = 0
+        return f'{current_year}{last_number + 1}'
 
     class Meta:
         verbose_name = 'Заказ'
