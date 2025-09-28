@@ -170,5 +170,24 @@ class OrderItem(models.Model):
         decimal_places=PRICE_DECIMAL_PLACES
     )
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.order.update_total_price()  # пересчёт суммы при изменении
+
+    def delete(self, *args, **kwargs):
+        order = self.order
+        super().delete(*args, **kwargs)
+        order.update_total_price()  # пересчёт суммы при удалении
+
+    class Meta:
+        verbose_name = 'Позиция в заказе'
+        verbose_name_plural = 'Позиции в заказах'
+        constraints = [
+            models.UniqueConstraint(
+                fields=('order', 'product'),
+                name='unique_product_in_order'
+            )
+        ]
+
     def __str__(self):
         return f'{self.product} × {self.quantity}'
