@@ -1,3 +1,5 @@
+from decimal import Decimal, ROUND_HALF_UP
+
 from django.db import models
 from django.core.validators import MinValueValidator
 
@@ -12,7 +14,7 @@ class Category(models.Model):
     slug = models.SlugField('Слаг', unique=True, max_length=MAX_SLUG_LENGTH)
     is_available = models.BooleanField(
         default=True, verbose_name='Доступен',
-        help_text='Снимите галю, чтобы скрыть скрыть категорию.')
+        help_text='Снимите галю, чтобы скрыть категорию.')
 
     class Meta:
         verbose_name = 'категория'
@@ -48,9 +50,18 @@ class Ingredient(models.Model):
     """Ингредиент, входящий в состав продукта."""
 
     name = models.CharField('Название', max_length=MAX_INGREDIENT_LENGTH)
-    proteins = models.FloatField('Белки', default=0,)
-    fats = models.FloatField('Жиры', default=0)
-    carbs = models.FloatField('Углеводы', default=0)
+    proteins = models.DecimalField(
+        'Белки', max_digits=5, decimal_places=1, default=Decimal('0.0'),
+        validators=[MinValueValidator(0)]
+    )
+    fats = models.DecimalField(
+        'Жиры', max_digits=5, decimal_places=1, default=Decimal('0.0'),
+        validators=[MinValueValidator(0)]
+    )
+    carbs = models.DecimalField(
+        'Углеводы', max_digits=5, decimal_places=1, default=Decimal('0.0'),
+        validators=[MinValueValidator(0)]
+    )
     nutrients = models.ManyToManyField(
         Nutrient,
         through='NutrientInIngredient',
@@ -80,16 +91,27 @@ class Product(models.Model):
 
     name = models.CharField('Название', max_length=MAX_CHAR_LENGTH)
     nutrition_mode = models.CharField(
+        'БЖУ',
         max_length=10,
         choices=NutritionMode.choices,
         default=NutritionMode.NONE,
     )
-    proteins = models.FloatField('Белки', default=0,)
-    fats = models.FloatField('Жиры', default=0)
-    carbs = models.FloatField('Углеводы', default=0)
+    proteins = models.DecimalField(
+        'Белки', max_digits=5, decimal_places=1, default=Decimal('0.0'),
+        validators=[MinValueValidator(0)]
+    )
+    fats = models.DecimalField(
+        'Жиры', max_digits=5, decimal_places=1, default=Decimal('0.0'),
+        validators=[MinValueValidator(0)]
+    )
+    carbs = models.DecimalField(
+        'Углеводы', max_digits=5, decimal_places=1, default=Decimal('0.0'),
+        validators=[MinValueValidator(0)]
+    )
     energy_value = models.PositiveIntegerField(
-        'Энергетическая ценность',
+        'Энергетическая ценность, ккал',
         help_text='Энергетическая ценность продукта, ккал',
+        blank=True, null=True
     )
     description = models.TextField('Описание', blank=True, null=True)
     image = models.ImageField(
@@ -118,9 +140,37 @@ class Product(models.Model):
     price = models.DecimalField(
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES,
+        validators=[MinValueValidator(0)],
         default=0.00,
-        help_text='Цена'
+        help_text='Цена, руб.'
     )
+
+    def recalc_nutrition(self):
+        """Пересчёт БЖУ и калорийности из ингредиентов."""
+        if self.nutrition_mode != self.NutritionMode.AUTO:
+            return
+
+        # Инициализируем переменные для БЖУ
+        proteins = fats = carbs = Decimal('0')
+        for link in self.product_ingredients.all():
+            ingredient = link.ingredient
+            ratio = Decimal(link.amount) / Decimal('100')  # Доля от 100 г
+            proteins += ingredient.proteins * ratio
+            fats += ingredient.fats * ratio
+            carbs += ingredient.carbs * ratio
+
+        # Округляем до 2 знаков после запятой
+        self.proteins = proteins.quantize(Decimal('0.01'),
+                                          rounding=ROUND_HALF_UP)
+        self.fats = fats.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        self.carbs = carbs.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+        # Калорийность
+        self.energy_value = int(
+            self.proteins * Decimal('4')
+            + self.fats * Decimal('9')
+            + self.carbs * Decimal('4')
+        )
 
     class Meta:
         verbose_name = 'продукт'
@@ -145,10 +195,12 @@ class IngredientInProduct(models.Model):
         related_name='product_links',
         verbose_name='Ингредиент'
     )
-    amount = models.PositiveIntegerField(
-        verbose_name='Количество',
-        validators=(MinValueValidator(1),),
-        help_text='Укажите количество этого ингредиента в гр.'
+    amount = models.DecimalField(
+        verbose_name='Количество на 100 г.',
+        max_digits=6,
+        decimal_places=1,  # Одна цифра после запятой
+        validators=(MinValueValidator(0.1),),
+        help_text='Укажите количество этого ингредиента в граммах'
     )
 
     class Meta:
@@ -180,10 +232,12 @@ class NutrientInIngredient(models.Model):
         related_name='nutrient_links',
         verbose_name='Ингредиент'
     )
-    amount_per_100g = models.PositiveIntegerField(
+    amount_per_100g = models.DecimalField(
         verbose_name='Количество',
-        validators=(MinValueValidator(1),),
-        help_text='Количество нутриента на 100 г ингредиента'
+        max_digits=6,
+        decimal_places=1,  # Одна цифра после запятой
+        validators=(MinValueValidator(0.1),),
+        help_text='Количество нутриента на 100 г ингредиента (в граммах)'
     )
 
     class Meta:
