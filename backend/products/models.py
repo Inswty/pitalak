@@ -1,6 +1,7 @@
+import logging
 from decimal import Decimal, ROUND_HALF_UP
 
-from django.db import models
+from django.db import models, transaction
 from django.core.validators import MinValueValidator
 
 from core.constants import (
@@ -8,9 +9,13 @@ from core.constants import (
     MAX_STR_LENGTH, MAX_UNIT_LENGTH, PRICE_DECIMAL_PLACES
 )
 
+logger = logging.getLogger(__name__)
+
 
 class Category(models.Model):
-    name = models.CharField('Название', max_length=MAX_CHAR_LENGTH)
+    name = models.CharField(
+        'Название', unique=True, max_length=MAX_CHAR_LENGTH
+    )
     slug = models.SlugField('Слаг', unique=True, max_length=MAX_SLUG_LENGTH)
     is_available = models.BooleanField(
         default=True, verbose_name='Доступен',
@@ -28,7 +33,9 @@ class Category(models.Model):
 class Nutrient(models.Model):
     """Нутриент в составе ингредиента."""
 
-    name = models.CharField('Название', max_length=MAX_CHAR_LENGTH)
+    name = models.CharField(
+        'Название', unique=True, max_length=MAX_CHAR_LENGTH
+    )
     measurement_unit = models.CharField(
         'Единица измерения',
         max_length=MAX_UNIT_LENGTH
@@ -49,7 +56,9 @@ class Nutrient(models.Model):
 class Ingredient(models.Model):
     """Ингредиент, входящий в состав продукта."""
 
-    name = models.CharField('Название', max_length=MAX_INGREDIENT_LENGTH)
+    name = models.CharField(
+        'Название', unique=True, max_length=MAX_INGREDIENT_LENGTH
+    )
     proteins = models.DecimalField(
         'Белки', max_digits=5, decimal_places=1, default=Decimal('0.0'),
         validators=[MinValueValidator(0)]
@@ -127,7 +136,6 @@ class Product(models.Model):
         help_text='Вес (гр.)',
         blank=True, null=True
     )
-
     category = models.ForeignKey(
         Category,
         on_delete=models.CASCADE,
@@ -145,32 +153,46 @@ class Product(models.Model):
         help_text='Цена, руб.'
     )
 
-    def recalc_nutrition(self):
+    def recalc_nutrition(self, save: bool = True):
         """Пересчёт БЖУ и калорийности из ингредиентов."""
         if self.nutrition_mode != self.NutritionMode.AUTO:
             return
-
-        # Инициализируем переменные для БЖУ
-        proteins = fats = carbs = Decimal('0')
-        for link in self.product_ingredients.all():
-            ingredient = link.ingredient
-            ratio = Decimal(link.amount) / Decimal('100')  # Доля от 100 г
-            proteins += ingredient.proteins * ratio
-            fats += ingredient.fats * ratio
-            carbs += ingredient.carbs * ratio
-
-        # Округляем до 2 знаков после запятой
-        self.proteins = proteins.quantize(Decimal('0.01'),
+        try:
+            # Транзакция для защиты при одновременных изменениях состава
+            with transaction.atomic():
+                # Инициализируем переменные для БЖУ
+                proteins = fats = carbs = Decimal('0')
+                for link in self.product_ingredients.select_related(
+                    'ingredient'
+                ):
+                    ingredient = link.ingredient
+                    ratio = Decimal(link.amount) / Decimal('100')
+                    proteins += ingredient.proteins * ratio
+                    fats += ingredient.fats * ratio
+                    carbs += ingredient.carbs * ratio
+                # Округляем до 2 знаков после запятой
+                self.proteins = proteins.quantize(Decimal('0.01'),
+                                                  rounding=ROUND_HALF_UP)
+                self.fats = fats.quantize(Decimal('0.01'),
                                           rounding=ROUND_HALF_UP)
-        self.fats = fats.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        self.carbs = carbs.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-
-        # Калорийность
-        self.energy_value = int(
-            self.proteins * Decimal('4')
-            + self.fats * Decimal('9')
-            + self.carbs * Decimal('4')
-        )
+                self.carbs = carbs.quantize(Decimal('0.01'),
+                                            rounding=ROUND_HALF_UP)
+                # Калорийность
+                self.energy_value = int(
+                    self.proteins * Decimal('4')
+                    + self.fats * Decimal('9')
+                    + self.carbs * Decimal('4')
+                )
+                if save:
+                    self.save(update_fields=('proteins', 'fats', 'carbs',
+                                             'energy_value'))
+                    logger.info('Успешный пересчёт nutrition для продукта'
+                                ' "%s"', self.name)
+        except Exception:
+            logger.exception(
+                'Ошибка при пересчёте nutrition для Product "%s"',
+                self.name,
+            )
 
     class Meta:
         verbose_name = 'продукт'
