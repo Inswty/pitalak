@@ -1,11 +1,19 @@
 import logging
 
+from django.db import transaction
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
 from .models import IngredientInProduct, Product, Ingredient
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(post_save, sender=Product)
+def trigger_auto_recalc(sender, instance, **kwargs):
+    """Обновляет nutrition продукта после сохранения."""
+    if instance.nutrition_mode != Product.NutritionMode.NONE:
+        transaction.on_commit(lambda: instance.recalc_nutrition(save=True))
 
 
 @receiver([post_save, post_delete], sender=IngredientInProduct)
@@ -29,7 +37,8 @@ def update_product_nutrition(sender, instance, **kwargs):
         return
     logger.info('Состав ингредиентов продукта "%s" был изменен, запущен'
                 ' пересчет nutritions', instance.product)
-    product.recalc_nutrition(save=True)
+    # Оборачиваем в on_commit — чтобы пересчёт был после завершения транзакции
+    transaction.on_commit(lambda: product.recalc_nutrition(save=True))
 
 
 @receiver(post_save, sender=Ingredient)

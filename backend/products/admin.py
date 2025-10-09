@@ -67,25 +67,13 @@ class ProductForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # energy_value всегда только для чтения
         self.fields['energy_value'].disabled = True
         self.fields['energy_value'].help_text = (
             'Рассчитывается автоматически из значений БЖУ'
         )
-        # Делаем поля необязательными по умолчанию
+        # Делаем поля необязательными
         for field in ['proteins', 'fats', 'carbs']:
             self.fields[field].required = False
-
-    def clean(self):
-        cleaned_data = super().clean()
-        nutrition_mode = cleaned_data.get('nutrition_mode')
-        # В режиме MANUAL проверяем, что поля БЖУ заполнены
-        if nutrition_mode == Product.NutritionMode.MANUAL:
-            for field in ['proteins', 'fats', 'carbs']:
-                if cleaned_data.get(field) is None:
-                    self.add_error(field,
-                                   'Это поле обязательно в ручном режиме')
-        return cleaned_data
 
 
 @admin.register(Product)

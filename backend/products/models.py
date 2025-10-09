@@ -155,28 +155,27 @@ class Product(models.Model):
 
     def recalc_nutrition(self, save: bool = True):
         """Пересчёт БЖУ и калорийности из ингредиентов."""
-        if self.nutrition_mode != self.NutritionMode.AUTO:
-            return
         try:
             # Транзакция для защиты при одновременных изменениях состава
             with transaction.atomic():
-                # Инициализируем переменные для БЖУ
-                proteins = fats = carbs = Decimal('0')
-                for link in self.product_ingredients.select_related(
-                    'ingredient'
-                ):
-                    ingredient = link.ingredient
-                    ratio = Decimal(link.amount) / Decimal('100')
-                    proteins += ingredient.proteins * ratio
-                    fats += ingredient.fats * ratio
-                    carbs += ingredient.carbs * ratio
-                # Округляем до 2 знаков после запятой
-                self.proteins = proteins.quantize(Decimal('0.01'),
-                                                  rounding=ROUND_HALF_UP)
-                self.fats = fats.quantize(Decimal('0.01'),
-                                          rounding=ROUND_HALF_UP)
-                self.carbs = carbs.quantize(Decimal('0.01'),
-                                            rounding=ROUND_HALF_UP)
+                if self.nutrition_mode == self.NutritionMode.AUTO:
+                    # Инициализируем переменные для БЖУ
+                    proteins = fats = carbs = Decimal('0')
+                    for link in self.product_ingredients.select_related(
+                        'ingredient'
+                    ):
+                        ingredient = link.ingredient
+                        ratio = Decimal(link.amount) / Decimal('100')
+                        proteins += ingredient.proteins * ratio
+                        fats += ingredient.fats * ratio
+                        carbs += ingredient.carbs * ratio
+                    # Округляем до 2 знаков после запятой
+                    self.proteins = proteins.quantize(Decimal('0.01'),
+                                                      rounding=ROUND_HALF_UP)
+                    self.fats = fats.quantize(Decimal('0.01'),
+                                              rounding=ROUND_HALF_UP)
+                    self.carbs = carbs.quantize(Decimal('0.01'),
+                                                rounding=ROUND_HALF_UP)
                 # Калорийность
                 self.energy_value = int(
                     self.proteins * Decimal('4')
@@ -184,8 +183,11 @@ class Product(models.Model):
                     + self.carbs * Decimal('4')
                 )
                 if save:
-                    self.save(update_fields=('proteins', 'fats', 'carbs',
-                                             'energy_value'))
+                    # Сохраняем только актуальные поля
+                    fields = ['energy_value']
+                    if self.nutrition_mode == self.NutritionMode.AUTO:
+                        fields += ['proteins', 'fats', 'carbs']
+                    self.save(update_fields=fields)
                     logger.info('Успешный пересчёт nutrition для продукта'
                                 ' "%s"', self.name)
         except Exception:
