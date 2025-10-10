@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib import admin
 from django.core.validators import MinValueValidator
+from django.forms import NumberInput
 from django.utils.html import format_html
 
 from .models import (
@@ -64,6 +65,9 @@ class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
         fields = '__all__'
+        widgets = {
+            'price': NumberInput(attrs={'min': 0}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

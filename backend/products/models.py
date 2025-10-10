@@ -120,7 +120,8 @@ class Product(models.Model):
     energy_value = models.PositiveIntegerField(
         'Энергетическая ценность, ккал',
         help_text='Энергетическая ценность продукта, ккал',
-        blank=True, null=True
+        blank=True, null=True,
+        default=0
     )
     description = models.TextField('Описание', blank=True, null=True)
     image = models.ImageField(
@@ -133,8 +134,9 @@ class Product(models.Model):
         help_text='Выберите ингредиенты и укажите их количество'
     )
     weight = models.FloatField(
+        'Вес',
         help_text='Вес (гр.)',
-        blank=True, null=True
+        blank=True, null=True, default=0
     )
     category = models.ForeignKey(
         Category,
@@ -143,12 +145,13 @@ class Product(models.Model):
         verbose_name='Категория'
     )
     is_available = models.BooleanField(
-        default=True, verbose_name='Доступен',
+        'Доступен', default=True,
         help_text='Снимите галю, чтобы скрыть товар.')
     price = models.DecimalField(
+        'Цена',
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES,
-        validators=[MinValueValidator(0)],
+        validators=[MinValueValidator(0.009)],
         default=0.00,
         help_text='Цена, руб.'
     )
@@ -182,14 +185,15 @@ class Product(models.Model):
                     + self.fats * Decimal('9')
                     + self.carbs * Decimal('4')
                 )
-                if save:
-                    # Сохраняем только актуальные поля
-                    fields = ['energy_value']
-                    if self.nutrition_mode == self.NutritionMode.AUTO:
-                        fields += ['proteins', 'fats', 'carbs']
-                    self.save(update_fields=fields)
-                    logger.info('Успешный пересчёт nutrition для продукта'
-                                ' "%s"', self.name)
+                logger.info('Успешный пересчёт nutrition для продукта'
+                            ' "%s"', self.name)
+                return {
+                    'proteins': proteins,
+                    'fats': fats,
+                    'carbs': carbs,
+                    'energy_value': self.energy_value
+                }
+
         except Exception:
             logger.exception(
                 'Ошибка при пересчёте nutrition для Product "%s"',
