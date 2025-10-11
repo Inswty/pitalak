@@ -71,7 +71,7 @@ class ProductForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['energy_value'].disabled = True
+        self.fields['energy_value'].disabled = False
         self.fields['energy_value'].help_text = (
             'Рассчитывается автоматически из значений БЖУ'
         )

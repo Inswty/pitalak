@@ -156,7 +156,11 @@ class Product(models.Model):
         help_text='Цена, руб.'
     )
 
-    def recalc_nutrition(self, save: bool = True):
+    def save(self, *args, **kwargs):
+        logger.info('Сохранение продукта: %s', self.name)
+        super().save(*args, **kwargs)
+
+    def recalc_nutrition(self):
         """Пересчёт БЖУ и калорийности из ингредиентов."""
         try:
             # Транзакция для защиты при одновременных изменениях состава
@@ -185,12 +189,12 @@ class Product(models.Model):
                     + self.fats * Decimal('9')
                     + self.carbs * Decimal('4')
                 )
-                logger.info('Успешный пересчёт nutrition для продукта'
+                logger.info('Рассчитаны PFC для продукта'
                             ' "%s"', self.name)
                 return {
-                    'proteins': proteins,
-                    'fats': fats,
-                    'carbs': carbs,
+                    'proteins': self.proteins,
+                    'fats': self.fats,
+                    'carbs': self.carbs,
                     'energy_value': self.energy_value
                 }
 
