@@ -8,6 +8,7 @@
 - PostgreSQL
 - Redis
 - Simple JWT
+- JavaScript
 - Gunicorn
 - Nginx
 - Docker Compose

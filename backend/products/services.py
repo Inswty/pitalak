@@ -19,8 +19,9 @@ class ProductService:
             return True
         if product.nutrition_mode == Product.NutritionMode.NONE:
             logger.info(
-                'Пропуск пересчёта "%s": ручной режим. reason=%s',
+                'Пропуск пересчёта "%s": режим "%s". reason=%s',
                 product.name,
+                product.get_nutrition_mode_display(),
                 reason,
             )
             return True
