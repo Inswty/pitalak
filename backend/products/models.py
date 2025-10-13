@@ -45,6 +45,10 @@ class Nutrient(models.Model):
         help_text='Рекомендуемая суточная потребность'
     )
 
+    def save(self, *args, **kwargs):
+        logger.info('Нутриент "%s" сохранён', self.name)
+        super().save(*args, **kwargs)
+
     class Meta:
         verbose_name = 'нутриент'
         verbose_name_plural = 'нутриенты'
@@ -81,6 +85,11 @@ class Ingredient(models.Model):
     @property
     def energy_value(self):
         return int(self.proteins * 4 + self.fats * 9 + self.carbs * 4)
+    energy_value.fget.short_description = 'Энергетическая ценность (ккал)'
+
+    def save(self, *args, **kwargs):
+        logger.info('Ингредиент "%s" сохранён', self.name)
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = 'ингредиент'
@@ -120,7 +129,6 @@ class Product(models.Model):
     energy_value = models.PositiveIntegerField(
         'Энергетическая ценность, ккал',
         help_text='Энергетическая ценность продукта, ккал',
-        blank=True, null=True,
         default=0
     )
     description = models.TextField('Описание', blank=True, null=True)
@@ -136,7 +144,7 @@ class Product(models.Model):
     weight = models.FloatField(
         'Вес',
         help_text='Вес (гр.)',
-        blank=True, null=True, default=0
+        default=0
     )
     category = models.ForeignKey(
         Category,
