@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django import forms
 from django.contrib import admin
 from django.core.validators import MinValueValidator
@@ -43,6 +45,10 @@ class NutrientAdmin(admin.ModelAdmin):
 class IngredientAdmin(admin.ModelAdmin):
     list_display = (
         'name',
+        'proteins',
+        'fats',
+        'carbs',
+        'energy_value'
     )
     inlines = (NutrientInIngredientInline,)
     search_fields = ('name',)
@@ -79,6 +85,14 @@ class ProductForm(forms.ModelForm):
         for field in ['proteins', 'fats', 'carbs']:
             self.fields[field].required = False
 
+    def clean(self):
+        """Если NULL -> то 0."""
+        cleaned_data = super().clean()
+        for field in ['proteins', 'fats', 'carbs']:
+            if not cleaned_data.get(field):
+                cleaned_data[field] = Decimal('0.0')
+        return cleaned_data
+
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
@@ -89,6 +103,7 @@ class ProductAdmin(admin.ModelAdmin):
         'is_available',
         'image_preview',
         'price',
+        'weight',
         'ingredients_list',
     )
     list_editable = (

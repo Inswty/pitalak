@@ -129,6 +129,7 @@ class Product(models.Model):
     energy_value = models.PositiveIntegerField(
         'Энергетическая ценность, ккал',
         help_text='Энергетическая ценность продукта, ккал',
+        blank=True, null=True,
         default=0
     )
     description = models.TextField('Описание', blank=True, null=True)
@@ -191,13 +192,15 @@ class Product(models.Model):
                                               rounding=ROUND_HALF_UP)
                     self.carbs = carbs.quantize(Decimal('0.01'),
                                                 rounding=ROUND_HALF_UP)
+                    logger.info('Рассчитаны PFC для продукта'
+                                ' "%s"', self.name)
                 # Калорийность
                 self.energy_value = int(
                     self.proteins * Decimal('4')
                     + self.fats * Decimal('9')
                     + self.carbs * Decimal('4')
                 )
-                logger.info('Рассчитаны PFC для продукта'
+                logger.info('Рассчитан energy_value для продукта'
                             ' "%s"', self.name)
                 return {
                     'proteins': self.proteins,
