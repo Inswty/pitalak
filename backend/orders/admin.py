@@ -73,7 +73,10 @@ class OrderAdmin(admin.ModelAdmin):
     list_editable = ('status',)
     inlines = (ProductInOrderInline,)
     readonly_fields = ('order_number', 'total_price', 'created_at',)
-    search_fields = ('order_number', 'user__email', 'user__name')
+    list_display_links = ('order_number', 'user')  # кликабельные поля
+    search_fields = (
+        'order_number', 'user__email', 'user__name', 'user__phone'
+    )
     list_filter = ('status',)
     autocomplete_fields = ('user', 'address')
     fieldsets = (
@@ -84,6 +87,7 @@ class OrderAdmin(admin.ModelAdmin):
                 'status',
                 'address',
                 'total_price',
+                'comment',
             )
         }),
     )
