@@ -80,10 +80,14 @@ class Address(models.Model):
     is_primary = models.BooleanField("Основной", default=False)
 
     def save(self, *args, **kwargs):
-        # если этот адрес отмечается как основной — сбрасываем у остальных
+        # Если новый адрес или ещё нет адресов — этот будет основным
+        if not self.pk or not Address.objects.filter(user=self.user).exists():
+            self.is_primary = True
+        # Если этот адрес отмечается как основной — сбрасываем у остальных
         if self.is_primary:
             Address.objects.filter(
-                user=self.user, is_primary=True).update(is_primary=False)
+                user=self.user, is_primary=True
+            ).exclude(pk=self.pk).update(is_primary=False)
         super().save(*args, **kwargs)
 
     class Meta:
