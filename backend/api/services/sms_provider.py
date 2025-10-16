@@ -18,6 +18,7 @@ class TargetSMSClient:
 
     def send_sms(self, phone: str, otp: str):
         """Отправка SMS с обработкой ошибок."""
+        phone = phone.as_e164.lstrip('+')
         payload = {
             "security": {
                 "login": self.login,

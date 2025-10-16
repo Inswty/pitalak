@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from phonenumber_field.modelfields import PhoneNumberField
 
 from core.constants import MAX_STR_LENGTH
 
@@ -28,11 +29,7 @@ class User(AbstractUser):
     # Убираем username
     username = None
 
-    phone = models.CharField(
-        'Номер телефона',
-        max_length=15,
-        unique=True
-    )
+    phone = PhoneNumberField('Номер телефона', unique=True, region='RU')
     phone_verified = models.BooleanField(
         'Телефон подтвержден',
         default=False

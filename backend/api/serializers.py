@@ -6,7 +6,7 @@ from phonenumber_field.serializerfields import PhoneNumberField
 
 from users.models import User
 
-logger = logging.getLogger(__name__)  # --- ??? ---
+logger = logging.getLogger(__name__)                                    # --- ??? ---
 
 
 class BaseOTPSerializer(serializers.Serializer):
@@ -19,10 +19,6 @@ class BaseOTPSerializer(serializers.Serializer):
             'blank': 'Номер телефона обязателен для заполнения'
         }
     )
-
-    def validate_phone(self, value):
-        phone_str = value.as_e164.lstrip('+')
-        return phone_str
 
 
 class OTPRequestSerializer(BaseOTPSerializer):
