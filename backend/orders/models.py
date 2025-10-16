@@ -43,9 +43,10 @@ class CartItem(models.Model):
     )
     product = models.ForeignKey(
         Product,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        verbose_name='Продукт'
     )
-    quantity = models.PositiveIntegerField(default=1)
+    quantity = models.PositiveIntegerField('Количество', default=1)
 
     class Meta:
         verbose_name = 'Позиция в корзине'
@@ -90,12 +91,13 @@ class Order(models.Model):
     )
     created_at = models.DateTimeField('Создан', auto_now_add=True)
     status = models.CharField(
+        'Статус',
         max_length=20,
         choices=STATUS_CHOICES,
         default='new'
     )
     total_price = models.DecimalField(
-        'Сумма',
+        'Сумма (руб.)',
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES,
         default=Decimal('0.00')
@@ -106,6 +108,12 @@ class Order(models.Model):
         null=True, blank=True,
         related_name='orders',
         verbose_name='Адрес доставки'
+    )
+    comment = models.TextField(
+        'Комментарий',
+        help_text='Комментарий к заказу',
+        null=True,
+        blank=True
     )
 
     def save(self, *args, **kwargs):
@@ -145,6 +153,7 @@ class Order(models.Model):
     class Meta:
         verbose_name = 'Заказ'
         verbose_name_plural = 'Заказы'
+        default_related_name = 'orders'
         ordering = ('-created_at',)
 
     def __str__(self):
@@ -162,10 +171,12 @@ class OrderItem(models.Model):
     product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
-        related_name='order_items'
+        related_name='order_items',
+        verbose_name='Продукт'
     )
-    quantity = models.PositiveIntegerField(default=1)
+    quantity = models.PositiveIntegerField('Количество', default=1)
     price = models.DecimalField(
+        'Цена',
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES
     )
