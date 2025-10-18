@@ -70,6 +70,7 @@ class UserAdmin(BaseUserAdmin):
 
     @admin.display(description='Сумма заказов')
     def total_cost_orders(self, obj):
+        """Подсчёт суммы всех закозов пользователя."""
         result = obj.orders.aggregate(total=Sum('total_price'))['total']
         if result is None:
             return '0.00 ₽'
