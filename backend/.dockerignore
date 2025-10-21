@@ -1,0 +1,6 @@
+db.sqlite3
+logs
+media
+venv
+.env
+.git
