@@ -1,8 +1,37 @@
+from django.urls import path
+
 from django.contrib import admin, messages
+from django.contrib.admin.views.decorators import staff_member_required
+from django.http import JsonResponse
 from django.shortcuts import redirect
 
+from users.models import Address
 from .models import Order, OrderItem, ShoppingCart, CartItem
 from .services import OrderService
+
+
+@staff_member_required
+def addresses_for_user(request):
+    """Возвращает список адресов, принадлежащих пользователю: user_id."""
+    user_id = request.GET.get('user_id')
+    if not user_id:
+        return JsonResponse([], safe=False)
+
+    addresses = Address.objects.filter(user_id=user_id)
+    data = [
+        {
+            'id': a.id,
+            'text': ', '.join(filter(None, [
+                a.locality,
+                a.street,
+                f'д. {a.house}' if a.house else None,
+                f'кв. {a.flat}' if a.flat else None,
+                f'эт. {a.floor}' if a.floor else None,
+            ]))
+        }
+        for a in addresses
+    ]
+    return JsonResponse(data, safe=False)
 
 
 class CartItemInline(admin.TabularInline):
@@ -78,7 +107,7 @@ class OrderAdmin(admin.ModelAdmin):
         'order_number', 'user__email', 'user__name', 'user__phone'
     )
     list_filter = ('status',)
-    autocomplete_fields = ('user', 'address')
+    autocomplete_fields = ('user',)
     fieldsets = (
         (None, {
             'fields': (
@@ -97,3 +126,25 @@ class OrderAdmin(admin.ModelAdmin):
         return ', '.join(
             [product.name for product in obj.products.all()]
         )
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        # Если объект существует и у него есть пользователь
+        if obj and obj.user:
+            form.base_fields['address'].queryset = obj.user.addresses.all()
+        else:
+            # Для нового объекта показываем пустой queryset
+            # JavaScript заполнит его после выбора пользователя
+            form.base_fields['address'].queryset = Address.objects.none()
+        return form
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('api/addresses/', self.admin_site.admin_view(
+                addresses_for_user), name='admin_addresses')
+        ]
+        return custom_urls + urls
+
+    class Media:
+        js = ('admin/js/admin_filter_addresses.js',)
