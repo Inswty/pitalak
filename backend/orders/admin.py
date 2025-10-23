@@ -128,14 +128,31 @@ class OrderAdmin(admin.ModelAdmin):
         )
 
     def get_form(self, request, obj=None, **kwargs):
+        """
+        Настраивает форму заказа в админке.
+
+        Queryset поля 'address' ограничивается адресами выбранного пользователя
+        (или пустой, если пользователь ещё не выбран).
+        JS динамически подгружает адреса при выборе пользователя.
+        """
         form = super().get_form(request, obj, **kwargs)
-        # Если объект существует и у него есть пользователь
-        if obj and obj.user:
-            form.base_fields['address'].queryset = obj.user.addresses.all()
+        # Определяем user_id
+        user_id = None
+        if request.method == 'POST':
+            user_id = request.POST.get('user') or getattr(obj, 'user_id', None)
+        elif obj:
+            user_id = obj.user_id
+        # Формируем queryset адресов
+        if user_id:
+            form.base_fields['address'].queryset = Address.objects.filter(
+                user_id=user_id
+            )
         else:
-            # Для нового объекта показываем пустой queryset
-            # JavaScript заполнит его после выбора пользователя
             form.base_fields['address'].queryset = Address.objects.none()
+        # Отключаем кнопки add/change/delete/view
+        for attr in ['can_add_related', 'can_change_related',
+                     'can_delete_related', 'can_view_related']:
+            setattr(form.base_fields['address'].widget, attr, False)
         return form
 
     def get_urls(self):
