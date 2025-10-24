@@ -1,3 +1,4 @@
+// Скрипт для динамического подсчета PFC, EV, изменении полей при выборе режимов в админке
 document.addEventListener('DOMContentLoaded', function () {
     const modeSelect = document.querySelector('#id_nutrition_mode');
     const names = ['proteins', 'fats', 'carbs', 'energy_value'];
