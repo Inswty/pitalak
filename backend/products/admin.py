@@ -2,7 +2,6 @@ from decimal import Decimal
 
 from django import forms
 from django.contrib import admin
-from django.core.validators import MinValueValidator
 from django.forms import NumberInput
 from django.utils.html import format_html
 

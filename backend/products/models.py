@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import models, transaction
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 
 from core.constants import (
@@ -87,7 +88,15 @@ class Ingredient(models.Model):
         return int(self.proteins * 4 + self.fats * 9 + self.carbs * 4)
     energy_value.fget.short_description = 'Энергетическая ценность (ккал)'
 
+    def clean(self):
+        if self.proteins + self.fats + self.carbs > 100:
+            raise ValidationError(
+                'Сумма белков, жиров и углеводов не может быть больше 100 г'
+                ' на 100 г продукта'
+            )
+
     def save(self, *args, **kwargs):
+        self.full_clean()
         logger.info('Ингредиент "%s" сохранён', self.name)
         super().save(*args, **kwargs)
 
@@ -165,7 +174,15 @@ class Product(models.Model):
         help_text='Цена, руб.'
     )
 
+    def clean(self):
+        if self.proteins + self.fats + self.carbs > 100:
+            raise ValidationError(
+                'Сумма белков, жиров и углеводов не может быть больше 100 г'
+                ' на 100 г продукта'
+            )
+
     def save(self, *args, **kwargs):
+        self.full_clean()
         logger.info('Сохранение продукта: %s', self.name)
         super().save(*args, **kwargs)
 

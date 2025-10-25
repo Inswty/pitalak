@@ -59,6 +59,14 @@ class ProductService:
             setattr(product, field, value)
 
         logger.info('Пересчёт PFC для "%s" успешно завершён', product.name)
+        # логируем превышение БЖУ
+        total = product.proteins + product.fats + product.carbs
+        if total > 100:
+            logger.warning(
+                'Некорректные значения БЖУ для "%s":'
+                ' сумма = %.2f г. > 100 г.',
+                product.name, total
+            )
 
     @staticmethod
     def recalc_all_products_using_ingredient(ingredient):
@@ -78,6 +86,7 @@ class ProductService:
             )
             return
         updated_products = []
+        invalid_products = []  # добавим список для логирования проблемных
         for product in products:
             # Пропускаем несохранённые и ручные режимы
             if ProductService._should_skip_recalc(
@@ -86,6 +95,15 @@ class ProductService:
                 continue
             # Пересчёт нутриентов
             data = product.recalc_nutrition()
+            # вычислим сумму БЖУ перед обновлением
+            total = (
+                data.get('proteins', 0)
+                + data.get('fats', 0)
+                + data.get('carbs', 0)
+            )
+            if total > 100:
+                invalid_products.append((product.name, float(total)))
+
             for field in ProductService.UPDATE_FIELDS:
                 setattr(product, field, data[field])
             updated_products.append(product)
@@ -102,3 +120,11 @@ class ProductService:
                 len(updated_products),
                 ingredient.name,
             )
+            # Логируем проблемы
+            if invalid_products:
+                logger.warning(
+                    'Обнаружены продукты с некорректными БЖУ (>100г): %s',
+                    ', '.join(
+                        f'"{n}" ({t:.2f}г)' for n, t in invalid_products
+                    ),
+                )
