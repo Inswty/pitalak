@@ -2,7 +2,9 @@ from decimal import Decimal
 
 from django import forms
 from django.contrib import admin
+from django.core.exceptions import ValidationError
 from django.forms import NumberInput
+from django.forms.models import BaseInlineFormSet
 from django.utils.html import format_html
 
 from .models import (
@@ -23,8 +25,26 @@ class NutrientInIngredientInline(admin.TabularInline):
         return obj.nutrient.measurement_unit
 
 
+class ProductIngredientInlineFormSet(BaseInlineFormSet):
+    """Проверяет, что сумма ингредиентов не превышает 100 г."""
+    def clean(self):
+        super().clean()
+        total = 0
+        for form in self.forms:
+            if form.cleaned_data and not form.cleaned_data.get(
+                'DELETE', False
+            ):
+                total += form.cleaned_data.get('amount', 0)
+        if total > 100:
+            raise ValidationError(
+                'Сумма ингредиентов не может быть больше 100 г '
+                'на 100 г продукта.'
+            )
+
+
 class IngredientInProductInline(admin.TabularInline):
     model = IngredientInProduct
+    formset = ProductIngredientInlineFormSet
     extra = 1
     autocomplete_fields = ('ingredient',)
 
