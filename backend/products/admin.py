@@ -13,6 +13,26 @@ from .models import (
 )
 
 
+class NutritionFieldsMixin:
+    """Добавляет общую логику для форм с полями proteins, fats, carbs."""
+
+    NUTRITION_FIELDS = ['proteins', 'fats', 'carbs']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Делаем поля необязательными
+        for field in self.NUTRITION_FIELDS:
+            if field in self.fields:
+                self.fields[field].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        for field in self.NUTRITION_FIELDS:
+            if cleaned_data.get(field) is None:
+                cleaned_data[field] = Decimal('0.0')
+        return cleaned_data
+
+
 class NutrientInIngredientInline(admin.TabularInline):
     model = NutrientInIngredient
     extra = 1
@@ -60,8 +80,15 @@ class NutrientAdmin(admin.ModelAdmin):
     ordering = ('name',)
 
 
+class IngredientForm(NutritionFieldsMixin, forms.ModelForm):
+    class Meta:
+        model = Ingredient
+        fields = '__all__'
+
+
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
+    form = IngredientForm
     list_display = (
         'name',
         'proteins',
@@ -86,13 +113,11 @@ class CategoryAdmin(admin.ModelAdmin):
     ordering = ('name',)
 
 
-class ProductForm(forms.ModelForm):
+class ProductForm(NutritionFieldsMixin, forms.ModelForm):
     class Meta:
         model = Product
         fields = '__all__'
-        widgets = {
-            'price': NumberInput(attrs={'min': 0}),
-        }
+        widgets = {'price': NumberInput(attrs={'min': 0})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -100,17 +125,6 @@ class ProductForm(forms.ModelForm):
         self.fields['energy_value'].help_text = (
             'Рассчитывается автоматически из значений БЖУ'
         )
-        # Делаем поля необязательными
-        for field in ['proteins', 'fats', 'carbs']:
-            self.fields[field].required = False
-
-    def clean(self):
-        """Если NULL -> то 0."""
-        cleaned_data = super().clean()
-        for field in ['proteins', 'fats', 'carbs']:
-            if not cleaned_data.get(field):
-                cleaned_data[field] = Decimal('0.0')
-        return cleaned_data
 
 
 @admin.register(Product)
