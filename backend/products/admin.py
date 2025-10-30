@@ -157,7 +157,7 @@ class ProductAdmin(admin.ModelAdmin):
     )
 
     class Media:
-        js = ('admin/js/admin_product.js',)
+        js = ('admin/js/pfc-ev-calculator.js',)
 
     @admin.display(description='Ингредиенты')
     def ingredients_list(self, obj):

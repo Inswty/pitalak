@@ -41,8 +41,9 @@ class Nutrient(models.Model):
         'Единица измерения',
         max_length=MAX_UNIT_LENGTH
     )
-    rda = models.FloatField(
-        'РСП', null=True, blank=True,
+    rda = models.DecimalField(
+        'РСП', max_digits=6, decimal_places=3, default=Decimal('0.0'),
+        null=True, blank=True,
         help_text='Рекомендуемая суточная потребность'
     )
 
@@ -293,12 +294,19 @@ class NutrientInIngredient(models.Model):
         verbose_name='Ингредиент'
     )
     amount_per_100g = models.DecimalField(
-        verbose_name='Количество',
+        verbose_name='Количество на 100 г.',
         max_digits=6,
-        decimal_places=1,  # Одна цифра после запятой
+        decimal_places=3,
         validators=(MinValueValidator(0.1),),
         help_text='Количество нутриента на 100 г ингредиента (в граммах)'
     )
+
+    def clean(self):
+        if self.amount_per_100g > 100:
+            raise ValidationError(
+                'Количество нутриента не может быть больше 100 г'
+                ' на 100 г ингредиента'
+            )
 
     class Meta:
         verbose_name = 'нутриент в ингредиенте'

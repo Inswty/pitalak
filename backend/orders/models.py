@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.db import models
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.utils import timezone
 
 from core.constants import MAX_PRICE_DIGITS, PRICE_DECIMAL_PLACES
@@ -46,7 +47,11 @@ class CartItem(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Продукт'
     )
-    quantity = models.PositiveIntegerField('Количество', default=1)
+    quantity = models.PositiveIntegerField(
+        'Количество',
+        default=1,
+        validators=[MinValueValidator(1)]
+    )
 
     class Meta:
         verbose_name = 'Позиция в корзине'

@@ -164,4 +164,4 @@ class OrderAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     class Media:
-        js = ('admin/js/admin_filter_addresses.js',)
+        js = ('admin/js/address-filter.js',)
