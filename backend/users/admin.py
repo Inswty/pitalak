@@ -26,8 +26,18 @@ class AddressInlineFormSet(forms.BaseInlineFormSet):
             raise ValidationError('Только один адрес может быть основным.')
 
 
+class AddressInlineForm(forms.ModelForm):
+    class Meta:
+        model = Address
+        fields = '__all__'
+        widgets = {
+            'is_primary': forms.RadioSelect(choices=[(True, 'Да')]),
+        }
+
+
 class AddressInline(admin.TabularInline):
     model = Address
+    form = AddressInlineForm
     formset = AddressInlineFormSet
     extra = 1
 
@@ -35,6 +45,7 @@ class AddressInline(admin.TabularInline):
         css = {
             'all': ('admin/css/user-addresses.css',)
         }
+        js = ('admin/js/radio-is-primary.js',)
 
 
 @admin.register(User)
