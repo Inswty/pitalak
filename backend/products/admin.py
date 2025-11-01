@@ -140,7 +140,7 @@ class ProductImageInline(nested_admin.NestedTabularInline):
 
     class Media:
         css = {
-            'all': ('admin/css/hide_clear_checkbox.css',)
+            'all': ('admin/css/hide-clear-checkbox.css',)
         }
 
 

@@ -1,0 +1,10 @@
+/* Скрываем чекбоксы "Очистить" в images-group */
+#images-group .clearable-file-input {
+    display: none !important;
+}
+
+/* Скрываем поле order - весь столбец*/
+#images-group th.djn-th.order,
+#images-group td.djn-td.field-order {
+    display: none !important;
+}
