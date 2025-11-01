@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+import nested_admin
 from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
@@ -9,7 +10,7 @@ from django.utils.html import format_html
 
 from .models import (
     Category, Ingredient, IngredientInProduct, Nutrient, NutrientInIngredient,
-    Product
+    Product, ProductImage
 )
 
 
@@ -47,6 +48,7 @@ class NutrientInIngredientInline(admin.TabularInline):
 
 class ProductIngredientInlineFormSet(BaseInlineFormSet):
     """Проверяет, что сумма ингредиентов не превышает 100 г."""
+
     def clean(self):
         super().clean()
         total = 0
@@ -62,7 +64,7 @@ class ProductIngredientInlineFormSet(BaseInlineFormSet):
             )
 
 
-class IngredientInProductInline(admin.TabularInline):
+class IngredientInProductInline(nested_admin.NestedTabularInline):
     model = IngredientInProduct
     formset = ProductIngredientInlineFormSet
     extra = 1
@@ -127,8 +129,23 @@ class ProductForm(NutritionFieldsMixin, forms.ModelForm):
         )
 
 
+class ProductImageInline(nested_admin.NestedTabularInline):
+    """Уберем clear_checkbox из ImageInline."""
+
+    model = ProductImage
+    extra = 1
+    fields = ('image_preview', 'image', 'order')
+    readonly_fields = ('image_preview',)
+    sortable_field_name = 'order'
+
+    class Media:
+        css = {
+            'all': ('admin/css/hide_clear_checkbox.css',)
+        }
+
+
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(nested_admin.NestedModelAdmin):
     form = ProductForm
     list_display = (
         'name',
@@ -142,16 +159,15 @@ class ProductAdmin(admin.ModelAdmin):
     list_editable = (
         'price', 'is_available',
     )
-    inlines = (IngredientInProductInline,)
+    inlines = (ProductImageInline, IngredientInProductInline)
     search_fields = ('name',)
     ordering = ('-id',)
-    readonly_fields = ('image_preview',)
     fieldsets = (
         (None, {
             'fields': (
                 'name', 'category', 'nutrition_mode',
                 'proteins', 'fats', 'carbs', 'energy_value', 'description',
-                'price', 'is_available', 'image', 'image_preview', 'weight',
+                'price', 'is_available', 'weight',
             )
         }),
     )
@@ -167,8 +183,10 @@ class ProductAdmin(admin.ModelAdmin):
 
     @admin.display(description='Превью')
     def image_preview(self, obj):
-        if obj.image:
+        first_image = obj.images.first()  # Берем первый related ProductImage
+        if first_image and first_image.image:
             return format_html(
-                '<img src="{}" width="50">', obj.image.url
+                '<img src="{}" width="60" style="border-radius:4px;">',
+                first_image.image.url
             )
         return 'No image'

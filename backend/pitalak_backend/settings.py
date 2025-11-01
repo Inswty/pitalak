@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'djoser',
     'django_db_logger',
+    'nested_admin',
     'api.apps.ApiConfig',
     'core.apps.CoreConfig',
     'orders.apps.OrdersConfig',

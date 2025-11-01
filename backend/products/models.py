@@ -4,6 +4,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.db import models, transaction
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
+from django.utils.html import format_html
 
 from core.constants import (
     MAX_CHAR_LENGTH, MAX_INGREDIENT_LENGTH, MAX_PRICE_DIGITS, MAX_SLUG_LENGTH,
@@ -143,9 +144,6 @@ class Product(models.Model):
         default=0
     )
     description = models.TextField('Описание', blank=True, null=True)
-    image = models.ImageField(
-        'Фото', upload_to='images', blank=True, null=True
-    )
     ingredients = models.ManyToManyField(
         Ingredient,
         through='IngredientInProduct',
@@ -259,7 +257,7 @@ class IngredientInProduct(models.Model):
     amount = models.DecimalField(
         verbose_name='Количество на 100 г.',
         max_digits=6,
-        decimal_places=1,  # Одна цифра после запятой
+        decimal_places=2,
         validators=(MinValueValidator(0.1),),
         help_text='Укажите количество этого ингредиента в граммах'
     )
@@ -320,3 +318,36 @@ class NutrientInIngredient(models.Model):
 
     def __str__(self):
         return f'{self.ingredient} — {self.amount_per_100g} ({self.nutrient})'
+
+
+class ProductImage(models.Model):
+    """Изображения продукта."""
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='images'
+    )
+    image = models.ImageField(
+        'Фото', upload_to='images',
+        blank=True, null=True
+    )
+    order = models.PositiveIntegerField(null=True, blank=True)
+
+    def image_preview(self):
+        if self.image:
+            return format_html(
+                '<img src="{}" style="height:80px;border-radius:4px;">',
+                self.image.url
+            )
+        return ''
+
+    image_preview.short_description = 'Превью'
+
+    class Meta:
+        verbose_name = 'Изображение продукта'
+        verbose_name_plural = 'Изображения продуктов'
+        ordering = ('order',)
+
+    def __str__(self):
+        return f'{self.product.name} ({self.pk})'
