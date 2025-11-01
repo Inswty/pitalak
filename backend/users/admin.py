@@ -31,6 +31,11 @@ class AddressInline(admin.TabularInline):
     formset = AddressInlineFormSet
     extra = 1
 
+    class Media:
+        css = {
+            'all': ('admin/css/user-addresses.css',)
+        }
+
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):

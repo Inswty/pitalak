@@ -1,0 +1,31 @@
+/* Ограничиваем ширину, чтобы форма не растягивалась чрезмерно */
+
+.dynamic-addresses input.vTextField {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.dynamic-addresses {
+    max-width: 100%;
+}
+
+/*  Ограничение максимальной ширины для каждого поля */
+.dynamic-addresses input[name$='-locality'] {
+    max-width: 220px;   /* город */
+}
+
+.dynamic-addresses input[name$='-street'] {
+    max-width: 220px;   /* улица */
+}
+
+.dynamic-addresses input[name$='-house'] {
+    max-width: 80px;    /* дом */
+}
+
+.dynamic-addresses input[name$='-flat'] {
+    max-width: 80px;    /* квартира */
+}
+
+.dynamic-addresses input[name$='-floor'] {
+    max-width: 80px;    /* этаж */
+}
