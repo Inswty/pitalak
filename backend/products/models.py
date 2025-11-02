@@ -300,7 +300,8 @@ class NutrientInIngredient(models.Model):
     )
 
     def clean(self):
-        if self.amount_per_100g > 100:
+        super().clean()
+        if self.amount_per_100g is not None and self.amount_per_100g > 100:
             raise ValidationError(
                 'Количество нутриента не может быть больше 100 г'
                 ' на 100 г ингредиента'
