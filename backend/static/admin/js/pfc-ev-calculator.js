@@ -1,9 +1,9 @@
-// Скрипт для динамического подсчета PFC, EV, изменении полей при выборе режимов в админке
+// Динамический подсчет PFC, EV, изменении полей при выборе режимов
 document.addEventListener('DOMContentLoaded', function () {
     const modeSelect = document.querySelector('#id_nutrition_mode');
     const names = ['proteins', 'fats', 'carbs', 'energy_value'];
   
-    // кешируем строки и инпуты
+    // Кешируем строки и инпуты
     const rows = {};
     const inputs = {};
     names.forEach(name => {
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
   
         if (mode === 'none') {
           row.style.display = 'none';
-          input.readOnly = false;   // оставляем отправляемым, но скрываем
+          input.readOnly = false;   // Оставляем отправляемым, но скрываем
           input.required = false;
           input.value = '0';
   
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function () {
             input.readOnly = false;
             input.required = true;
             input.style.color = '';
-            // при переключении в ручной режим -> 0, если поле было сброшено
+            // При переключении в ручной режим -> 0, если поле было сброшено
             if (reset && !input.value) input.value = '0';
           }
         }
@@ -72,15 +72,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   
     if (modeSelect) {
-      // начальная инициализация — НЕ сбрасываем значения, чтобы не потерять то, что уже в базе
+      // Начальная инициализация — НЕ сбрасываем значения, чтобы не потерять то, что уже в базе
       applyMode(modeSelect.value, false);
   
-      // при изменении режима — сбрасываем поля и применяем поведение
+      // При изменении режима — сбрасываем поля и применяем поведение
       modeSelect.addEventListener('change', function () {
         applyMode(modeSelect.value, true); // reset = true
       });
 
-      // слушаем изменения БЖУ для пересчёта
+      // Слушаем изменения БЖУ для пересчёта
       ['proteins', 'fats', 'carbs'].forEach(name => {
         inputs[name]?.addEventListener('input', calculateEnergyValue);
       });

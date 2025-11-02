@@ -139,6 +139,7 @@ class ProductImageInline(nested_admin.NestedTabularInline):
     sortable_field_name = 'order'
 
     class Media:
+        js = ('admin/js/image-preview.js',)
         css = {
             'all': ('admin/css/hide-clear-checkbox.css',)
         }

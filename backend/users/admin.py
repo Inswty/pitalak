@@ -16,6 +16,7 @@ admin.site.unregister(Group)
 
 class AddressInlineFormSet(forms.BaseInlineFormSet):
     """Проверим, что не больше одного адреса отмечено как основной."""
+
     def clean(self):
         super().clean()
         primary_count = sum(
@@ -27,6 +28,8 @@ class AddressInlineFormSet(forms.BaseInlineFormSet):
 
 
 class AddressInlineForm(forms.ModelForm):
+    """Форма AddressInline с радиокнопкой для выбора основного адреса."""
+
     class Meta:
         model = Address
         fields = '__all__'

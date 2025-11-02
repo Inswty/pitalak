@@ -96,7 +96,9 @@ class Address(models.Model):
         ordering = ('-added',)
 
     def __str__(self):
-        parts = [self.locality, self.street, f'д. {self.house}']
+        parts = [self.locality, f' ул. {self.street}, д. {self.house}']
         if self.flat:
             parts.append(f'кв. {self.flat}')
+        if self.floor:
+            parts.append(f'эт. {self.floor}')
         return ', '.join(parts)
