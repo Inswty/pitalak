@@ -1,37 +1,12 @@
 from django.urls import path
 
 from django.contrib import admin, messages
-from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
 from django.shortcuts import redirect
 
 from users.models import Address
-from .models import Order, OrderItem, ShoppingCart, CartItem
+from .models import CartItem, Order, OrderItem, Product, ShoppingCart
 from .services import OrderService
-
-
-@staff_member_required
-def addresses_for_user(request):
-    """Возвращает список адресов, принадлежащих пользователю: user_id."""
-    user_id = request.GET.get('user_id')
-    if not user_id:
-        return JsonResponse([], safe=False)
-
-    addresses = Address.objects.filter(user_id=user_id)
-    data = [
-        {
-            'id': a.id,
-            'text': ', '.join(filter(None, [
-                a.locality,
-                f'ул. {a.street}',
-                f'д. {a.house}' if a.house else None,
-                f'кв. {a.flat}' if a.flat else None,
-                f'эт. {a.floor}' if a.floor else None,
-            ]))
-        }
-        for a in addresses
-    ]
-    return JsonResponse(data, safe=False)
 
 
 class CartItemInline(admin.TabularInline):
@@ -45,6 +20,9 @@ class ProductInOrderInline(admin.TabularInline):
     extra = 1
     min_num = 1
     autocomplete_fields = ('product',)
+
+    class Media:
+        js = ('admin/js/orderitem-price-autofill.js',)
 
 
 @admin.register(ShoppingCart)
@@ -156,12 +134,53 @@ class OrderAdmin(admin.ModelAdmin):
         return form
 
     def get_urls(self):
+        """
+        Расширяем маршруты админки заказов.
+
+        Добавляем API для подгрузки адресов пользователя и цен продуктов.
+        """
+
         urls = super().get_urls()
         custom_urls = [
-            path('api/addresses/', self.admin_site.admin_view(
-                addresses_for_user), name='admin_addresses')
+            path(
+                'api/addresses/',
+                self.admin_site.admin_view(self.addresses_for_user),
+                name='admin_addresses_for_user',
+            ),
+            path(
+                'api/get-product-price/<int:pk>/',
+                self.admin_site.admin_view(self.get_product_price),
+                name='admin_get_product_price',
+            ),
         ]
         return custom_urls + urls
+
+    def addresses_for_user(self, request):
+        """Возвращает список адресов, принадлежащих выбранному пользователю."""
+        user_id = request.GET.get('user_id')
+        if not user_id:
+            return JsonResponse([], safe=False)
+
+        addresses = Address.objects.filter(user_id=user_id)
+        data = [
+            {
+                'id': a.id,
+                'text': ', '.join(filter(None, [
+                    a.locality,
+                    f'ул. {a.street}',
+                    f'д. {a.house}' if a.house else None,
+                    f'кв. {a.flat}' if a.flat else None,
+                    f'эт. {a.floor}' if a.floor else None,
+                ]))
+            }
+            for a in addresses
+        ]
+        return JsonResponse(data, safe=False)
+
+    def get_product_price(self, request, pk):
+        """Возвращает цену выбранного товара для автозаполнения в инлайне."""
+        product = Product.objects.filter(pk=pk).only('price').first()
+        return JsonResponse({'price': product.price if product else None})
 
     class Media:
         js = ('admin/js/address-filter.js',)
