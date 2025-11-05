@@ -3,6 +3,7 @@ from django.urls import path
 from django.contrib import admin, messages
 from django.http import JsonResponse
 from django.shortcuts import redirect
+from django.utils.html import format_html
 
 from users.models import Address
 from .models import CartItem, Order, OrderItem, Product, ShoppingCart
@@ -18,8 +19,17 @@ class CartItemInline(admin.TabularInline):
 class ProductInOrderInline(admin.TabularInline):
     model = OrderItem
     extra = 1
-    min_num = 1
+    readonly_fields = ('line_total',)
     autocomplete_fields = ('product',)
+
+    def line_total(self, obj):
+        value = obj.price * obj.quantity if obj.pk else 0
+        formatted = f'{value:,.2f}'.replace(',', ' ')
+        return format_html(
+            '<input type="text" readonly class="vDecimalField" value="{}" />',
+            formatted
+        )
+    line_total.short_description = 'Сумма'
 
     class Media:
         js = ('admin/js/orderitem-price-autofill.js',)
@@ -183,4 +193,6 @@ class OrderAdmin(admin.ModelAdmin):
         return JsonResponse({'price': product.price if product else None})
 
     class Media:
-        js = ('admin/js/address-filter.js',)
+        js = ('admin/js/address-filter.js',
+              'admin/js/update-total-price.js',
+              )
