@@ -1,4 +1,4 @@
-// Скрипт для динамической фильтрации адресов в форме заказа в админке
+// Динамическая фильтрация адресов в форме заказа
 document.addEventListener('DOMContentLoaded', function() {
     const addressSelect = document.querySelector('#id_address');
     const userContainer = document.querySelector('.field-user');
@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const userSelect = () => document.querySelector('#id_user');
     let lastUserId = userSelect()?.value || null;
-    const addressCache = new Map(); // кэш адресов по user_id
 
     function clearAddresses() {
         addressSelect.innerHTML = '<option value="">------------</option>';
@@ -18,19 +17,13 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadAddresses(userId, reset = true) {
         if (!userId) return;
 
-        // Проверяем кэш
-        if (addressCache.has(userId)) {
-            if (reset) fillAddresses(addressCache.get(userId));
-            return;
-        }
-
         try {
             const response = await fetch(`/admin/orders/order/api/addresses/?user_id=${userId}`, {
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                cache: 'no-store' // Отключаем браузерный кэш
             });
             if (!response.ok) throw new Error('Network response was not ok');
             const data = await response.json();
-            addressCache.set(userId, data);
             if (reset) fillAddresses(data);
         } catch (err) {
             console.error('Ошибка при загрузке адресов:', err);
