@@ -59,7 +59,7 @@ class NutrientInIngredientInline(admin.TabularInline):
     autocomplete_fields = ('nutrient',)
     readonly_fields = ('nutrient_measurement_unit',)
 
-    # возвращаем measurement_unit из связанного объекта Nutrient
+    # Возвращаем measurement_unit из связанного объекта Nutrient
     @admin.display(description='Единица измерения')
     def nutrient_measurement_unit(self, obj):
         return obj.nutrient.measurement_unit
@@ -148,10 +148,26 @@ class ProductForm(NutritionFieldsMixin, forms.ModelForm):
         )
 
 
+class ProductImageForm(forms.ModelForm):
+    class Meta:
+        model = ProductImage
+        fields = '__all__'
+
+    def clean_image(self):
+        """Не позволяет сохранить пустую форму изображения."""
+        image = self.cleaned_data.get('image')
+        if not image:
+            raise forms.ValidationError(
+                'Выберете файл или удалите пустую строку'
+            )
+        return image
+
+
 class ProductImageInline(nested_admin.NestedTabularInline):
     """Уберем clear_checkbox из ImageInline."""
 
     model = ProductImage
+    form = ProductImageForm
     extra = 1
     fields = ('image_preview', 'image', 'order')
     readonly_fields = ('image_preview',)
