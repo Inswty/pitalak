@@ -45,7 +45,8 @@ class Nutrient(models.Model):
     rda = models.DecimalField(
         'РСП', max_digits=6, decimal_places=3, default=Decimal('0.0'),
         null=True, blank=True,
-        help_text='Рекомендуемая суточная потребность'
+        help_text='Рекомендуемая суточная потребность',
+        validators=[MinValueValidator(0)]
     )
 
     def save(self, *args, **kwargs):
@@ -153,7 +154,8 @@ class Product(models.Model):
     weight = models.FloatField(
         'Вес',
         help_text='Вес (гр.)',
-        default=0
+        default=0,
+        validators=[MinValueValidator(0)]
     )
     category = models.ForeignKey(
         Category,
@@ -295,7 +297,7 @@ class NutrientInIngredient(models.Model):
         verbose_name='Количество на 100 г.',
         max_digits=6,
         decimal_places=3,
-        validators=(MinValueValidator(0.1),),
+        validators=(MinValueValidator(0.0009),),
         help_text='Количество нутриента на 100 г ингредиента (в граммах)'
     )
 
