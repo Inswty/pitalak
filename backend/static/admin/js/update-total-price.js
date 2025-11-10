@@ -69,7 +69,10 @@
 
             // Подсветка при изменении
             found.el.css('color', 'red');
-            setTimeout(() => found.el.css('color', originalColor), 800);
+            if (found.highlightTimer) clearTimeout(found.highlightTimer);
+            found.highlightTimer = setTimeout(() => {
+                found.el.css('color', originalColor);
+            }, 800);
         }
 
         // Слушатели
