@@ -10,17 +10,43 @@ from .models import CartItem, Order, OrderItem, Product, ShoppingCart
 from .services import OrderService
 
 
+class ProductPriceAdminMixin:
+    """Добавляет универсальный эндпоинт для получения цены продукта."""
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'api/get-product-price/<int:pk>/',
+                self.admin_site.admin_view(self.get_product_price),
+                name='admin_get_product_price',
+            ),
+        ]
+        return custom_urls + urls
+
+    def get_product_price(self, request, pk):
+        """Возвращает цену выбранного товара для автозаполнения в инлайне."""
+        product = Product.objects.filter(pk=pk).only('price').first()
+        return JsonResponse({'price': product.price if product else None})
+
+
 class CartItemInline(admin.TabularInline):
     model = CartItem
     extra = 1
+    fields = ('product', 'quantity', 'price_display', 'line_total',)
+    readonly_fields = ('price_display', 'line_total',)
     autocomplete_fields = ('product',)
 
-
-class ProductInOrderInline(admin.TabularInline):
-    model = OrderItem
-    extra = 1
-    readonly_fields = ('line_total',)
-    autocomplete_fields = ('product',)
+    def price_display(self, obj):
+        """Отображает цену товара в инлайне."""
+        price = obj.product.price if obj.pk and obj.product else 0
+        # <input> нужен, чтобы JS мог подставить значение и вызвать пересчёт
+        return format_html(
+            '<input type="text" class="vDecimalField fake-price"'
+            ' data-name="price" readonly value="{:.2f}">',
+            price
+        )
+    price_display.short_description = 'Цена'
 
     def line_total(self, obj):
         value = obj.price * obj.quantity if obj.pk else 0
@@ -32,11 +58,11 @@ class ProductInOrderInline(admin.TabularInline):
     line_total.short_description = 'Сумма'
 
     class Media:
-        js = ('admin/js/orderitem-price-autofill.js',)
+        js = ('admin/js/price-autofill.js',)
 
 
 @admin.register(ShoppingCart)
-class ShoppingCartAdmin(admin.ModelAdmin):
+class ShoppingCartAdmin(ProductPriceAdminMixin, admin.ModelAdmin):
     list_display = ('user', 'item_list',)
     actions = ['create_order_from_cart']
     inlines = [CartItemInline]
@@ -78,8 +104,27 @@ class ShoppingCartAdmin(admin.ModelAdmin):
             self.message_user(request, str(e), level=messages.ERROR)
 
 
+class ProductInOrderInline(admin.TabularInline):
+    model = OrderItem
+    extra = 1
+    readonly_fields = ('line_total',)
+    autocomplete_fields = ('product',)
+
+    def line_total(self, obj):
+        value = obj.price * obj.quantity if obj.pk else 0
+        formatted = f'{value:,.2f}'.replace(',', ' ')
+        return format_html(
+            '<input type="text" readonly class="vDecimalField" value="{}" />',
+            formatted
+        )
+    line_total.short_description = 'Сумма'
+
+    class Media:
+        js = ('admin/js/price-autofill.js',)
+
+
 @admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
+class OrderAdmin(ProductPriceAdminMixin, admin.ModelAdmin):
     list_display = (
         'order_number',
         'user',
@@ -90,7 +135,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_editable = ('status',)
     inlines = (ProductInOrderInline,)
     readonly_fields = ('order_number', 'total_price', 'created_at',)
-    list_display_links = ('order_number', 'user')  # кликабельные поля
+    list_display_links = ('order_number', 'user')  # Кликабельные поля
     search_fields = (
         'order_number', 'user__email', 'user__name', 'user__phone'
     )
@@ -109,11 +154,11 @@ class OrderAdmin(admin.ModelAdmin):
         }),
     )
 
-    @admin.display(description='Товары')
+    """@admin.display(description='Товары')
     def product_list(self, obj):
         return ', '.join(
             [product.name for product in obj.products.all()]
-        )
+        )"""
 
     def get_form(self, request, obj=None, **kwargs):
         """
@@ -154,18 +199,13 @@ class OrderAdmin(admin.ModelAdmin):
         custom_urls = [
             path(
                 'api/addresses/',
-                self.admin_site.admin_view(self.addresses_for_user),
+                self.admin_site.admin_view(self.get_addresses_for_user),
                 name='admin_addresses_for_user',
-            ),
-            path(
-                'api/get-product-price/<int:pk>/',
-                self.admin_site.admin_view(self.get_product_price),
-                name='admin_get_product_price',
             ),
         ]
         return custom_urls + urls
 
-    def addresses_for_user(self, request):
+    def get_addresses_for_user(self, request):
         """Возвращает список адресов, принадлежащих выбранному пользователю."""
         user_id = request.GET.get('user_id')
         if not user_id:
@@ -186,11 +226,6 @@ class OrderAdmin(admin.ModelAdmin):
             for a in addresses
         ]
         return JsonResponse(data, safe=False)
-
-    def get_product_price(self, request, pk):
-        """Возвращает цену выбранного товара для автозаполнения в инлайне."""
-        product = Product.objects.filter(pk=pk).only('price').first()
-        return JsonResponse({'price': product.price if product else None})
 
     class Media:
         js = ('admin/js/address-filter.js',
