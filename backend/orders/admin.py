@@ -4,6 +4,7 @@ from django.contrib import admin, messages
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 from users.models import Address
 from .models import CartItem, Order, OrderItem, Product, ShoppingCart
@@ -37,19 +38,21 @@ class CartItemInline(admin.TabularInline):
     readonly_fields = ('price_display', 'line_total',)
     autocomplete_fields = ('product',)
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('product')
+
     def price_display(self, obj):
-        """Отображает цену товара в инлайне."""
-        price = obj.product.price if obj.pk and obj.product else 0
-        # <input> нужен, чтобы JS мог подставить значение и вызвать пересчёт
-        return format_html(
-            '<input type="text" class="vDecimalField fake-price"'
-            ' data-name="price" readonly value="{:.2f}">',
-            price
+        price = obj.product.price if obj.product else 0
+        html = (
+            f'<input type="text" class="vDecimalField fake-price"'
+            f' data-name="price" readonly value="{price:.2f}">'
         )
+        return mark_safe(html)  # Это гарантирут, что Django не заменит на «–»
     price_display.short_description = 'Цена'
 
     def line_total(self, obj):
-        value = obj.price * obj.quantity if obj.pk else 0
+        price = obj.product.price if obj.product else 0
+        value = price * obj.quantity
         formatted = f'{value:,.2f}'.replace(',', ' ')
         return format_html(
             '<input type="text" readonly class="vDecimalField" value="{}" />',
@@ -58,7 +61,9 @@ class CartItemInline(admin.TabularInline):
     line_total.short_description = 'Сумма'
 
     class Media:
-        js = ('admin/js/price-autofill.js',)
+        js = ('admin/js/price-autofill.js',
+              'admin/js/update-total-price.js',
+              )
 
 
 @admin.register(ShoppingCart)
@@ -67,13 +72,22 @@ class ShoppingCartAdmin(ProductPriceAdminMixin, admin.ModelAdmin):
     actions = ['create_order_from_cart']
     inlines = [CartItemInline]
     search_fields = ('user', 'user__email')
-    fieldsets = (
-        (None, {
-            'fields': (
-                'user',
-            )
-        }),
-    )
+    readonly_fields = ('total_sum_display',)
+    fields = ('user', 'total_sum_display',)
+
+    def total_sum_display(self, obj):
+        """Отображает общую сумму корзины"""
+        total = sum(
+            (item.product.price if item.product else 0) * item.quantity
+            for item in obj.items.all()
+        )
+        print(f'DEBUG total_sum_display: obj={obj}, total={total}')
+        formatted = f'{total:,.2f}'.replace(',', ' ')
+        return format_html(
+            '<input type="text" id="id_total_price" readonly class="vDecimalField" value="{}">',
+            formatted
+        )
+    total_sum_display.short_description = 'Сумма (руб.)'
 
     @admin.display(description='Товары')
     def item_list(self, obj):
@@ -153,12 +167,6 @@ class OrderAdmin(ProductPriceAdminMixin, admin.ModelAdmin):
             )
         }),
     )
-
-    """@admin.display(description='Товары')
-    def product_list(self, obj):
-        return ', '.join(
-            [product.name for product in obj.products.all()]
-        )"""
 
     def get_form(self, request, obj=None, **kwargs):
         """
