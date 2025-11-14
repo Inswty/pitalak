@@ -43,8 +43,13 @@
                 }
 
                 // Формируем URL запроса
-                let path = window.location.pathname.replace(/\/\d+\/change\/?$/, '/');
-                const url = path + 'api/get-product-price/' + productId + '/';
+                let baseAppPath = '';
+                if (window.location.pathname.includes('/orders/order/')) {
+                    baseAppPath = '/admin/orders/order/';
+                } else if (window.location.pathname.includes('/orders/shoppingcart/')) {
+                    baseAppPath = '/admin/orders/shoppingcart/';
+                }
+                const url = baseAppPath + 'api/get-product-price/' + productId + '/';
                 console.log('URL запроса цены:', url);
 
                 // Получаем цену

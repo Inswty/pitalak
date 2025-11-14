@@ -34,36 +34,34 @@ class ProductPriceAdminMixin:
 class CartItemInline(admin.TabularInline):
     model = CartItem
     extra = 1
-    fields = ('product', 'quantity', 'price_display', 'line_total',)
-    readonly_fields = ('price_display', 'line_total',)
+    fields = ('product', 'quantity', 'price', 'line_total',)
+    readonly_fields = ('price', 'line_total',)
     autocomplete_fields = ('product',)
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('product')
 
-    def price_display(self, obj):
-        price = obj.product.price if obj.product else 0
-        html = (
-            f'<input type="text" class="vDecimalField fake-price"'
-            f' data-name="price" readonly value="{price:.2f}">'
-        )
-        return mark_safe(html)  # Это гарантирут, что Django не заменит на «–»
-    price_display.short_description = 'Цена'
+    def price(self, obj):
+        """Отображаем цену товара в input для JS."""
+        price = obj.product.price if obj.product else ''
+        html = f'<input type="text" class="vDecimalField" name="price" readonly value="{price}">'
+        return mark_safe(html)
+    price.short_description = 'Цена'
 
     def line_total(self, obj):
-        price = obj.product.price if obj.product else 0
-        value = price * obj.quantity
-        formatted = f'{value:,.2f}'.replace(',', ' ')
-        return format_html(
-            '<input type="text" readonly class="vDecimalField" value="{}" />',
-            formatted
-        )
+        """Отображаем пустую строку для новых, иначе вычисляем."""
+        if obj.pk is None or obj.product is None:
+            html_value = ''
+        else:
+            price = obj.product.price
+            value = price * obj.quantity
+            html_value = f'{value:,.2f}'.replace(',', ' ')
+        html = f'<input type="text" class="vDecimalField" data-name="line_total" readonly value="{html_value}">'
+        return mark_safe(html)
     line_total.short_description = 'Сумма'
 
     class Media:
-        js = ('admin/js/price-autofill.js',
-              'admin/js/update-total-price.js',
-              )
+        js = ('admin/js/price-autofill.js', 'admin/js/update-total-price.js',)
 
 
 @admin.register(ShoppingCart)
@@ -76,18 +74,16 @@ class ShoppingCartAdmin(ProductPriceAdminMixin, admin.ModelAdmin):
     fields = ('user', 'total_sum_display',)
 
     def total_sum_display(self, obj):
-        """Отображает общую сумму корзины"""
+        """Отображает общую сумму корзины."""
+        if obj is None or not obj.pk:
+            return format_html('<div id="id_total_price" class="readonly">0,00</div>')
+
         total = sum(
             (item.product.price if item.product else 0) * item.quantity
             for item in obj.items.all()
         )
-        print(f'DEBUG total_sum_display: obj={obj}, total={total}')
         formatted = f'{total:,.2f}'.replace(',', ' ')
-        return format_html(
-            '<input type="text" id="id_total_price" readonly class="vDecimalField" value="{}">',
-            formatted
-        )
-    total_sum_display.short_description = 'Сумма (руб.)'
+        return format_html('<div id="id_total_price" class="readonly">{}</div>', formatted)
 
     @admin.display(description='Товары')
     def item_list(self, obj):
