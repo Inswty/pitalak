@@ -25,6 +25,13 @@ class ShoppingCart(models.Model):
         related_name='carts',
         verbose_name='Продукты'
     )
+    address = models.ForeignKey(
+        'users.Address',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='cart_adress',
+        verbose_name='Адрес доставки'
+    )
 
     class Meta:
         verbose_name = 'Корзина'

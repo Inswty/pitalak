@@ -68,9 +68,7 @@ class NutrientInIngredientInline(admin.TabularInline):
         return obj.nutrient.measurement_unit
 
     class Media:
-        js = (
-            'admin/js/nutrient-units.js',
-        )
+        js = ('admin/js/nutrient-units.js',)
 
 
 @admin.register(Nutrient)
@@ -92,7 +90,6 @@ class IngredientForm(NutritionFieldsMixin, forms.ModelForm):
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    form = IngredientForm
     list_display = (
         'name',
         'proteins',
@@ -100,9 +97,10 @@ class IngredientAdmin(admin.ModelAdmin):
         'carbs',
         'energy_value'
     )
-    inlines = (NutrientInIngredientInline,)
     search_fields = ('name',)
     ordering = ('name',)
+    form = IngredientForm
+    inlines = (NutrientInIngredientInline,)
 
     def get_urls(self):
         urls = super().get_urls()
@@ -169,9 +167,9 @@ class ProductImageInline(nested_admin.NestedTabularInline):
 
     model = ProductImage
     form = ProductImageForm
-    extra = 1
     fields = ('image_preview', 'image', 'order')
     readonly_fields = ('image_preview',)
+    extra = 1
     sortable_field_name = 'order'
 
     class Media:
@@ -208,7 +206,6 @@ class IngredientInProductInline(nested_admin.NestedTabularInline):
 
 @admin.register(Product)
 class ProductAdmin(nested_admin.NestedModelAdmin):
-    form = ProductForm
     list_display = (
         'name',
         'category',
@@ -221,9 +218,9 @@ class ProductAdmin(nested_admin.NestedModelAdmin):
     list_editable = (
         'price', 'is_available',
     )
-    inlines = (ProductImageInline, IngredientInProductInline)
     search_fields = ('name',)
     ordering = ('-id',)
+    form = ProductForm
     fieldsets = (
         (None, {
             'fields': (
@@ -233,6 +230,7 @@ class ProductAdmin(nested_admin.NestedModelAdmin):
             )
         }),
     )
+    inlines = (ProductImageInline, IngredientInProductInline)
 
     class Media:
         js = ('admin/js/pfc-ev-calculator.js',)

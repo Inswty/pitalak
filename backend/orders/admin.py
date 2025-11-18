@@ -10,10 +10,50 @@ from .models import CartItem, Order, OrderItem, Product, ShoppingCart
 from .services import OrderService
 
 
-class ProductPriceAdminMixin:
-    """Добавляет универсальный эндпоинт для получения цены продукта."""
+class OrderCartDynamicAdminMixin:
+    """
+    Миксин для Order/Cart Admin.
+
+    Добавляет:
+    1. Динамическую фильтрацию поля 'address' по пользователю.
+    2. API-эндпоинты для подгрузки адресов и цен продуктов.
+    3. Подключение JS-скриптов для динамической логики формы.
+    """
+
+    def get_form(self, request, obj=None, **kwargs):
+        """
+        Настраивает форму заказа в админке.
+
+        Queryset поля 'address' ограничивается адресами выбранного пользователя
+        (или пустой, если пользователь ещё не выбран).
+        JS динамически подгружает адреса при выборе пользователя.
+        """
+        form = super().get_form(request, obj, **kwargs)
+        # Определяем user_id
+        user_id = None
+        if request.method == 'POST':
+            user_id = request.POST.get('user') or getattr(obj, 'user_id', None)
+        elif obj:
+            user_id = obj.user_id
+        # Формируем queryset адресов
+        if user_id:
+            form.base_fields['address'].queryset = Address.objects.filter(
+                user_id=user_id
+            )
+        else:
+            form.base_fields['address'].queryset = Address.objects.none()
+        # Отключаем кнопки add/change/delete/view
+        for attr in ['can_add_related', 'can_change_related',
+                     'can_delete_related', 'can_view_related']:
+            setattr(form.base_fields['address'].widget, attr, False)
+        return form
 
     def get_urls(self):
+        """
+        Расширяем маршруты админки.
+
+        Добавляем API для подгрузки адресов пользователя и цен продуктов.
+        """
         urls = super().get_urls()
         custom_urls = [
             path(
@@ -21,13 +61,45 @@ class ProductPriceAdminMixin:
                 self.admin_site.admin_view(self.get_product_price),
                 name='admin_get_product_price',
             ),
+            path(
+                'api/addresses/',
+                self.admin_site.admin_view(self.get_addresses_for_user),
+                name='admin_addresses_for_user',
+            ),
         ]
         return custom_urls + urls
+
+    def get_addresses_for_user(self, request):
+        """Возвращает список адресов, принадлежащих выбранному пользователю."""
+        user_id = request.GET.get('user_id')
+        if not user_id:
+            return JsonResponse([], safe=False)
+
+        addresses = Address.objects.filter(user_id=user_id)
+        data = [
+            {
+                'id': a.id,
+                'text': ', '.join(filter(None, [
+                    a.locality,
+                    f'ул. {a.street}',
+                    f'д. {a.house}' if a.house else None,
+                    f'кв. {a.flat}' if a.flat else None,
+                    f'эт. {a.floor}' if a.floor else None,
+                ]))
+            }
+            for a in addresses
+        ]
+        return JsonResponse(data, safe=False)
 
     def get_product_price(self, request, pk):
         """Возвращает цену выбранного товара для автозаполнения в инлайне."""
         product = Product.objects.filter(pk=pk).only('price').first()
         return JsonResponse({'price': product.price if product else None})
+
+    class Media:
+        js = ('admin/js/address-filter.js',
+              'admin/js/update-total-price.js',
+              )
 
 
 class CartItemInline(admin.TabularInline):
@@ -43,7 +115,8 @@ class CartItemInline(admin.TabularInline):
     def price(self, obj):
         """Отображаем цену товара в input для JS."""
         price = obj.product.price if obj.product else ''
-        html = f'<input type="text" class="vDecimalField" name="price" readonly value="{price}">'
+        html = ('<input type="text" class="vDecimalField" '
+                f'name="price" readonly value="{price}">')
         return mark_safe(html)
     price.short_description = 'Цена'
 
@@ -55,34 +128,38 @@ class CartItemInline(admin.TabularInline):
             price = obj.product.price
             value = price * obj.quantity
             html_value = f'{value:,.2f}'.replace(',', ' ')
-        html = f'<input type="text" class="vDecimalField" data-name="line_total" readonly value="{html_value}">'
+        html = ('<input type="text" class="vDecimalField" '
+                f'data-name="line_total" readonly value="{html_value}">')
         return mark_safe(html)
     line_total.short_description = 'Сумма'
 
     class Media:
-        js = ('admin/js/price-autofill.js', 'admin/js/update-total-price.js',)
+        js = ('admin/js/price-autofill.js',)
 
 
 @admin.register(ShoppingCart)
-class ShoppingCartAdmin(ProductPriceAdminMixin, admin.ModelAdmin):
+class ShoppingCartAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
     list_display = ('user', 'item_list',)
-    actions = ['create_order_from_cart']
-    inlines = [CartItemInline]
     search_fields = ('user', 'user__email')
+    fields = ('user', 'address', 'total_sum_display',)
     readonly_fields = ('total_sum_display',)
-    fields = ('user', 'total_sum_display',)
+    autocomplete_fields = ('user',)
+    actions = ('create_order_from_cart',)
+    inlines = (CartItemInline,)
 
     def total_sum_display(self, obj):
         """Отображает общую сумму корзины."""
         if obj is None or not obj.pk:
-            return format_html('<div id="id_total_price" class="readonly">0,00</div>')
+            return format_html('<div id="id_total_price"'
+                               ' class="readonly">0,00</div>')
 
         total = sum(
             (item.product.price if item.product else 0) * item.quantity
             for item in obj.items.all()
         )
         formatted = f'{total:,.2f}'.replace(',', ' ')
-        return format_html('<div id="id_total_price" class="readonly">{}</div>', formatted)
+        return format_html('<div id="id_total_price"'
+                           ' class="readonly">{}</div>', formatted)
 
     @admin.display(description='Товары')
     def item_list(self, obj):
@@ -133,7 +210,7 @@ class ProductInOrderInline(admin.TabularInline):
 
 
 @admin.register(Order)
-class OrderAdmin(ProductPriceAdminMixin, admin.ModelAdmin):
+class OrderAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
     list_display = (
         'order_number',
         'user',
@@ -141,15 +218,12 @@ class OrderAdmin(ProductPriceAdminMixin, admin.ModelAdmin):
         'created_at',
         'total_price',
     )
-    list_editable = ('status',)
-    inlines = (ProductInOrderInline,)
-    readonly_fields = ('order_number', 'total_price', 'created_at',)
     list_display_links = ('order_number', 'user')  # Кликабельные поля
+    list_filter = ('status',)
+    list_editable = ('status',)
     search_fields = (
         'order_number', 'user__email', 'user__name', 'user__phone'
     )
-    list_filter = ('status',)
-    autocomplete_fields = ('user',)
     fieldsets = (
         (None, {
             'fields': (
@@ -162,75 +236,6 @@ class OrderAdmin(ProductPriceAdminMixin, admin.ModelAdmin):
             )
         }),
     )
-
-    def get_form(self, request, obj=None, **kwargs):
-        """
-        Настраивает форму заказа в админке.
-
-        Queryset поля 'address' ограничивается адресами выбранного пользователя
-        (или пустой, если пользователь ещё не выбран).
-        JS динамически подгружает адреса при выборе пользователя.
-        """
-        form = super().get_form(request, obj, **kwargs)
-        # Определяем user_id
-        user_id = None
-        if request.method == 'POST':
-            user_id = request.POST.get('user') or getattr(obj, 'user_id', None)
-        elif obj:
-            user_id = obj.user_id
-        # Формируем queryset адресов
-        if user_id:
-            form.base_fields['address'].queryset = Address.objects.filter(
-                user_id=user_id
-            )
-        else:
-            form.base_fields['address'].queryset = Address.objects.none()
-        # Отключаем кнопки add/change/delete/view
-        for attr in ['can_add_related', 'can_change_related',
-                     'can_delete_related', 'can_view_related']:
-            setattr(form.base_fields['address'].widget, attr, False)
-        return form
-
-    def get_urls(self):
-        """
-        Расширяем маршруты админки заказов.
-
-        Добавляем API для подгрузки адресов пользователя и цен продуктов.
-        """
-
-        urls = super().get_urls()
-        custom_urls = [
-            path(
-                'api/addresses/',
-                self.admin_site.admin_view(self.get_addresses_for_user),
-                name='admin_addresses_for_user',
-            ),
-        ]
-        return custom_urls + urls
-
-    def get_addresses_for_user(self, request):
-        """Возвращает список адресов, принадлежащих выбранному пользователю."""
-        user_id = request.GET.get('user_id')
-        if not user_id:
-            return JsonResponse([], safe=False)
-
-        addresses = Address.objects.filter(user_id=user_id)
-        data = [
-            {
-                'id': a.id,
-                'text': ', '.join(filter(None, [
-                    a.locality,
-                    f'ул. {a.street}',
-                    f'д. {a.house}' if a.house else None,
-                    f'кв. {a.flat}' if a.flat else None,
-                    f'эт. {a.floor}' if a.floor else None,
-                ]))
-            }
-            for a in addresses
-        ]
-        return JsonResponse(data, safe=False)
-
-    class Media:
-        js = ('admin/js/address-filter.js',
-              'admin/js/update-total-price.js',
-              )
+    readonly_fields = ('order_number', 'total_price', 'created_at',)
+    autocomplete_fields = ('user',)
+    inlines = (ProductInOrderInline,)
