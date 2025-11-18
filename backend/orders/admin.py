@@ -1,8 +1,7 @@
-from django.urls import path
-
 from django.contrib import admin, messages
 from django.http import JsonResponse
 from django.shortcuts import redirect
+from django.urls import path
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 

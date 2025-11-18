@@ -6,7 +6,10 @@ from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.forms import NumberInput
 from django.forms.models import BaseInlineFormSet
+from django.http import JsonResponse
+from django.urls import path
 from django.utils.html import format_html
+
 
 from .models import (
     Category, Ingredient, IngredientInProduct, Nutrient, NutrientInIngredient,
@@ -64,30 +67,10 @@ class NutrientInIngredientInline(admin.TabularInline):
     def nutrient_measurement_unit(self, obj):
         return obj.nutrient.measurement_unit
 
-
-class ProductIngredientInlineFormSet(BaseInlineFormSet):
-    """Проверяет, что сумма ингредиентов не превышает 100 г."""
-
-    def clean(self):
-        super().clean()
-        total = 0
-        for form in self.forms:
-            if form.cleaned_data and not form.cleaned_data.get(
-                'DELETE', False
-            ):
-                total += form.cleaned_data.get('amount', 0)
-        if total > 100:
-            raise ValidationError(
-                'Сумма ингредиентов не может быть больше 100 г '
-                'на 100 г продукта.'
-            )
-
-
-class IngredientInProductInline(nested_admin.NestedTabularInline):
-    model = IngredientInProduct
-    formset = ProductIngredientInlineFormSet
-    extra = 1
-    autocomplete_fields = ('ingredient',)
+    class Media:
+        js = (
+            'admin/js/nutrient-units.js',
+        )
 
 
 @admin.register(Nutrient)
@@ -120,6 +103,24 @@ class IngredientAdmin(admin.ModelAdmin):
     inlines = (NutrientInIngredientInline,)
     search_fields = ('name',)
     ordering = ('name',)
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'api/get-measurement_unit/<int:pk>/',
+                self.admin_site.admin_view(self.get_measurement_unit),
+                name='get_measurement_unit',
+            ),
+        ]
+        return custom_urls + urls
+
+    def get_measurement_unit(self, request, pk):
+        """Возвращает ед.измерения нутриента для автозаполнения в инлайне."""
+        nutrient = (Nutrient.objects.filter(pk=pk)
+                    .only('measurement_unit').first())
+        return JsonResponse({'measurement_unit': nutrient.measurement_unit
+                             if nutrient else None})
 
 
 @admin.register(Category)
@@ -178,6 +179,31 @@ class ProductImageInline(nested_admin.NestedTabularInline):
         css = {
             'all': ('admin/css/hide-clear-checkbox.css',)
         }
+
+
+class ProductIngredientInlineFormSet(BaseInlineFormSet):
+    """Проверяет, что сумма ингредиентов не превышает 100 г."""
+
+    def clean(self):
+        super().clean()
+        total = 0
+        for form in self.forms:
+            if form.cleaned_data and not form.cleaned_data.get(
+                'DELETE', False
+            ):
+                total += form.cleaned_data.get('amount', 0)
+        if total > 100:
+            raise ValidationError(
+                'Сумма ингредиентов не может быть больше 100 г '
+                'на 100 г продукта.'
+            )
+
+
+class IngredientInProductInline(nested_admin.NestedTabularInline):
+    model = IngredientInProduct
+    formset = ProductIngredientInlineFormSet
+    extra = 1
+    autocomplete_fields = ('ingredient',)
 
 
 @admin.register(Product)
