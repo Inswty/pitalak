@@ -90,15 +90,26 @@ class Address(models.Model):
             ).exclude(pk=self.pk).update(is_primary=False)
         super().save(*args, **kwargs)
 
+    def format_address_display(self):
+        """Вспомогательный метод для форматирования адреса."""
+        parts = filter(None, [
+            self.locality,
+            f'ул. {self.street}',
+            f'д. {self.house}' if self.house else None,
+            f'кв. {self.flat}' if self.flat else None,
+            f'эт. {self.floor}' if self.floor else None,
+        ])
+        return ', '.join(parts)
+
     class Meta:
         verbose_name = 'Адрес'
         verbose_name_plural = 'Адреса'
         ordering = ('-added',)
 
     def __str__(self):
-        parts = [self.locality, f' ул. {self.street}, д. {self.house}']
-        if self.flat:
-            parts.append(f'кв. {self.flat}')
-        if self.floor:
-            parts.append(f'эт. {self.floor}')
-        return ', '.join(parts)
+        """Отображение адреса в админке (в т.ч. для начальных autocomplete)."""
+        display_text = self.format_address_display()
+        # Добавим ⭐, если адрес основной
+        if self.is_primary:
+            return f'{display_text}  [⭐]'
+        return display_text

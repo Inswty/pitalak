@@ -34,7 +34,7 @@ class AddressInlineForm(forms.ModelForm):
         model = Address
         fields = '__all__'
         widgets = {
-            'is_primary': forms.RadioSelect(choices=[(True, 'Да')]),
+            'is_primary': forms.RadioSelect(choices=[(True, '⭐')]),
         }
 
 

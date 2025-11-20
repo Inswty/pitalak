@@ -32,10 +32,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function fillAddresses(addresses) {
         clearAddresses();
+        
         for (const addr of addresses) {
             const opt = document.createElement('option');
             opt.value = addr.id;
-            opt.textContent = addr.text;
+            let displayText = addr.text;
+            // Проверяем поле 'is_primary' и добавляем эмодзи
+            if (addr.is_primary) {
+                displayText =  displayText + ' [⭐]';
+            }
+            opt.textContent = displayText;
             addressSelect.appendChild(opt);
         }
     }
@@ -44,7 +50,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const observer = new MutationObserver(() => {
         const user = userSelect();
         if (!user) return;
-
         const userId = user.value;
         if (userId !== lastUserId) {
             lastUserId = userId;

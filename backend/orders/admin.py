@@ -79,13 +79,8 @@ class OrderCartDynamicAdminMixin:
         data = [
             {
                 'id': a.id,
-                'text': ', '.join(filter(None, [
-                    a.locality,
-                    f'ул. {a.street}',
-                    f'д. {a.house}' if a.house else None,
-                    f'кв. {a.flat}' if a.flat else None,
-                    f'эт. {a.floor}' if a.floor else None,
-                ]))
+                'is_primary': a.is_primary,
+                'text': a.format_address_display()
             }
             for a in addresses
         ]
