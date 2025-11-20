@@ -260,7 +260,7 @@ class IngredientInProduct(models.Model):
         verbose_name='Количество на 100 г.',
         max_digits=6,
         decimal_places=2,
-        validators=(MinValueValidator(0.1),),
+        validators=(MinValueValidator(0.009),),
         help_text='Укажите количество этого ингредиента в граммах'
     )
 

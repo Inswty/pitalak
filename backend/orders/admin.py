@@ -97,9 +97,10 @@ class OrderCartDynamicAdminMixin:
         return JsonResponse({'price': product.price if product else None})
 
     class Media:
-        js = ('admin/js/address-filter.js',
-              'admin/js/update-total-price.js',
-              )
+        js = (
+            'admin/js/address-filter.js',
+            'admin/js/update-total-price.js',
+        )
 
 
 class CartItemInline(admin.TabularInline):
@@ -160,6 +161,7 @@ class ShoppingCartAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
         formatted = f'{total:,.2f}'.replace(',', ' ')
         return format_html('<div id="id_total_price"'
                            ' class="readonly">{}</div>', formatted)
+    total_sum_display.short_description = 'Сумма (руб.)'
 
     @admin.display(description='Товары')
     def item_list(self, obj):
@@ -177,9 +179,18 @@ class ShoppingCartAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
             )
             return
         cart = queryset.first()
+        # Проверяем, что в корзине выбран адрес
+        if not cart.address:
+            self.message_user(
+                request,
+                'Невозможно создать заказ: в корзине не выбран адрес. '
+                'Выберите адрес в корзине перед оформлением.',
+                level=messages.ERROR
+            )
+            return
         try:
-            order = OrderService.create_from_cart(
-                cart, address=cart.user.addresses.first())
+            # Передаём cart
+            order = OrderService.create_from_cart(cart)
             self.message_user(
                 request,
                 f'Заказ #{order.order_number} успешно создан!',
