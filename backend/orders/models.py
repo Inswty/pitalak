@@ -127,6 +127,11 @@ class Order(models.Model):
         null=True,
         blank=True
     )
+    delivery = models.DateTimeField(
+        'Доставка',
+        null=True,
+        blank=True,
+    )
 
     def save(self, *args, **kwargs):
         if not self.order_number:
@@ -215,3 +220,24 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f'{self.product} × {self.quantity}'
+
+
+class DeliveryRule(models.Model):
+    """
+    Правило генерации слотов доставки в зависимости от времени создания заказа.
+    """
+
+    name = models.CharField('Название правила', max_length=255,)
+    time_from = models.TimeField('Начало периода заказа')
+    time_to = models.TimeField('Конец периода заказа')
+    days_offset = models.PositiveIntegerField('Сдвиг по дням')
+    delivery_time_from = models.TimeField('Время начала доставки')
+    delivery_time_to = models.TimeField('Время окончания доставки')
+    is_active = models.BooleanField(default=True, verbose_name='Активно')
+
+    class Meta:
+        verbose_name = 'Политика доставки'
+        verbose_name_plural = 'Политика доставки'
+
+    def __str__(self):
+        return self.name

@@ -1,7 +1,9 @@
+from datetime import timedelta
 from decimal import Decimal
+
 from django.db import transaction
 
-from .models import Order, OrderItem
+from .models import DeliveryRule, Order, OrderItem
 
 
 class OrderService:
@@ -37,3 +39,29 @@ class OrderService:
         # Очищаем корзину
         cart.items.all().delete()
         return order
+
+
+def get_available_delivery_slots(order_created_at):
+    """
+    Возвращает список доступных слотов доставки, сгенерированных на основе
+    активных правил и времени создания заказа.
+    """
+    rules = DeliveryRule.objects.filter(is_active=True)
+
+    slots = []
+    order_time = order_created_at.time()
+
+    for rule in rules:
+        if rule.time_from <= order_time <= rule.time_to:
+            date = (order_created_at + timedelta(days=rule.days_offset)).date()
+
+            slots.append({
+                'date': date,
+                'time_from': rule.delivery_time_from,
+                'time_to': rule.delivery_time_to,
+                'display': f'{date.strftime("%d.%m")} '
+                           f'{rule.delivery_time_from.strftime("%H:%M")}-'
+                           f'{rule.delivery_time_to.strftime("%H:%M")}'
+            })
+
+    return slots
