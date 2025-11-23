@@ -241,9 +241,10 @@ class OrderAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
                 'created_at',
                 'status',
                 'address',
+                'delivery',
+                'payment_method',
                 'total_price',
                 'comment',
-                'delivery',
             )
         }),
     )
@@ -280,7 +281,6 @@ class DeliveryRuleAdminForm(forms.ModelForm):
 @admin.register(DeliveryRule)
 class DeliveryRuleAdmin(admin.ModelAdmin):
     form = DeliveryRuleAdminForm
-
     list_display = (
         'name',
         'time_from',

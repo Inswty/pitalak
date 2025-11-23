@@ -84,11 +84,16 @@ class Order(models.Model):
         ('done', 'Завершён'),
         ('canceled', 'Отменён'),
     ]
+    PAYMENT_METHOD_CHOICES = [
+        ('sbp', 'СБП'),
+        ('cash', 'Наличные курьеру'),
+        # ('card', 'Банковская карта'),
+        # ('yoomoney', 'ЮMoney'),
+    ]
 
     order_number = models.CharField(
         'Номер заказа', max_length=10, unique=True, editable=False
     )
-
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -131,6 +136,12 @@ class Order(models.Model):
         'Доставка',
         null=True,
         blank=True,
+    )
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_METHOD_CHOICES,
+        default='sbp',
+        verbose_name='Способ оплаты',
     )
 
     def save(self, *args, **kwargs):
