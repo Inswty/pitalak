@@ -50,14 +50,14 @@ class TargetSMSClient:
         try:
             response = requests.post(
                 self.base_url,
-                json=payload,
+                json=payload,  # requests сериализует в JSON
                 timeout=self.timeout,
                 headers={
                     "Content-Type": "application/json; charset=utf-8"
                 }
             )
-            response.raise_for_status()
-
+            response.raise_for_status()   # Проверка HTTP-ошибок (4xx, 5xx)
+            # Возвращаем десериализованный JSON-ответ
             result = response.json()
             if result.get('status') == 'send':
                 logger.info('SMS отправлено на %s, message_id=%s',
@@ -83,4 +83,36 @@ class TargetSMSClient:
         except ValueError as e:
             logger.error('Невалидный JSON ответ от SMS провайдера для %s: %s',
                          phone, e)
+            return None
+
+    def get_balance(self):
+        """
+        Запрос баланса.
+
+        Возвращает:
+            dict: JSON-ответ от провайдера
+            (либо с ключом 'money', либо с ключом 'error').
+        """
+        payload = {
+            "security": {
+                "login": self.login,
+                "password": self.password
+            },
+            "type": "balance"
+        }
+
+        try:
+            response = requests.post(
+                self.base_url,
+                json=payload, 
+                timeout=self.timeout,
+                headers={
+                    "Content-Type": "application/json; charset=utf-8"
+                }
+            )
+            response.raise_for_status()
+            return response.json()
+
+        except (requests.exceptions.RequestException, ValueError) as e:
+            logger.error('Ошибка при запросе баланса SMS: %s', e)
             return None
