@@ -97,8 +97,9 @@ class OrderCartDynamicAdminMixin:
 
     class Media:
         js = (
-            'admin/js/address-filter.js',
-            'admin/js/update-total-price.js',
+            'admin_extensions/js/address-filter.js',
+            'admin_extensions/js/'
+            'update-total-price.js',
         )
 
 
@@ -134,7 +135,7 @@ class CartItemInline(admin.TabularInline):
     line_total.short_description = 'Сумма'
 
     class Media:
-        js = ('admin/js/price-autofill.js',)
+        js = ('admin_extensions/js/price-autofill.js',)
 
 
 @admin.register(ShoppingCart)
@@ -216,7 +217,7 @@ class ProductInOrderInline(admin.TabularInline):
     line_total.short_description = 'Сумма'
 
     class Media:
-        js = ('admin/js/price-autofill.js',)
+        js = ('admin_extensions/js/price-autofill.js',)
 
 
 @admin.register(Order)

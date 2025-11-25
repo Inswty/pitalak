@@ -104,7 +104,7 @@ class TargetSMSClient:
         try:
             response = requests.post(
                 self.base_url,
-                json=payload, 
+                json=payload,
                 timeout=self.timeout,
                 headers={
                     "Content-Type": "application/json; charset=utf-8"

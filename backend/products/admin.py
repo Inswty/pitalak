@@ -68,7 +68,7 @@ class NutrientInIngredientInline(admin.TabularInline):
         return obj.nutrient.measurement_unit
 
     class Media:
-        js = ('admin/js/nutrient-units.js',)
+        js = ('admin_extensions/js/nutrient-units.js',)
 
 
 @admin.register(Nutrient)
@@ -173,9 +173,10 @@ class ProductImageInline(nested_admin.NestedTabularInline):
     sortable_field_name = 'order'
 
     class Media:
-        js = ('admin/js/image-preview.js',)
+        js = ('admin_extensions/js/image-preview.js',)
         css = {
-            'all': ('admin/css/hide-clear-checkbox.css',)
+            'all': ('admin_extensions/'
+                    'css/hide-clear-checkbox.css',)
         }
 
 
@@ -233,7 +234,7 @@ class ProductAdmin(nested_admin.NestedModelAdmin):
     inlines = (ProductImageInline, IngredientInProductInline)
 
     class Media:
-        js = ('admin/js/pfc-ev-calculator.js',)
+        js = ('admin_extensions/js/pfc-ev-calculator.js',)
 
     @admin.display(description='Ингредиенты')
     def ingredients_list(self, obj):

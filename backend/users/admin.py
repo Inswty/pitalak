@@ -46,9 +46,10 @@ class AddressInline(admin.TabularInline):
 
     class Media:
         css = {
-            'all': ('admin/css/user-addresses.css',)
+            'all': ('admin_extensions/css/'
+                    'user-addresses.css',)
         }
-        js = ('admin/js/radio-is-primary.js',)
+        js = ('admin_extensions/js/radio-is-primary.js',)
 
 
 @admin.register(User)
