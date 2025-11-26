@@ -1,0 +1,28 @@
+{% extends "admin/base.html" %} 
+{% load static %}
+
+{% block title %}{{ title }} | {{ 'PITALAK site admin' }}{% endblock %}
+
+{% block branding %}
+    <h1 id="site-name">
+        <a href="{% url 'admin:index' %}">{{ 'PITALAK Администрирование' }}</a>
+    </h1>
+    
+    {# <-- Добавляем блок с балансом сразу после заголовка #}
+    {% if SMS_PROVIDER_BALANCE %}
+        <span style="
+            font-size: 14px; 
+            margin-left: 20px; 
+            padding: 5px 10px;
+            background-color:rgb(69, 77, 72);
+            color:rgb(80, 207, 158); 
+            border-radius: 4px;
+            display: inline-block;
+            vertical-align: top;
+        ">
+            {{ SMS_PROVIDER_BALANCE }} 
+        </span>
+    {% endif %}
+{% endblock %}
+
+{% block nav-global %}{{ block.super }}{% endblock %}

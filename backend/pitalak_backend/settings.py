@@ -17,6 +17,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 AUTH_USER_MODEL = 'users.User'
 
 INSTALLED_APPS = [
+    'admin_extensions.apps.AdminExtensionsConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -33,7 +34,6 @@ INSTALLED_APPS = [
     'orders.apps.OrdersConfig',
     'products.apps.ProductsConfig',
     'users.apps.UsersConfig',
-    'admin_extensions.apps.AdminExtensionsConfig'
 ]
 
 MIDDLEWARE = [
@@ -58,7 +58,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                #'admin_extensions.context_processors.get_sms_balance',
+                'admin_extensions.context_processors.get_sms_balance',
             ],
         },
     },
@@ -75,18 +75,19 @@ SMS_PROVIDER_API_URL = os.getenv('SMS_PROVIDER_API_URL')
 OTP_LENGTH = 4
 OTP_TTL_SECONDS = 300  # 5 минут
 MAX_OTP_ATTEMPTS = 3
-MAX_OTP_REQUESTS_PER_HOUR = int(os.getenv("MAX_OTP_REQUESTS_PER_HOUR", 3))
+MAX_OTP_REQUESTS_PER_HOUR = int(os.getenv('MAX_OTP_REQUESTS_PER_HOUR', 3))
 OTP_COOLDOWN_SECONDS = 60  # 1 минута между запросами
 OTP_TEXT = 'Ваш код подтверждения: {otp}'
+SMS_BALANCE_CACHE_TIMEOUT = 43200  # Время кеширования баланса в секундах
 
 # Cache settings for OTP
-REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
+REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
 CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{REDIS_HOST}:6379/1",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f'redis://{REDIS_HOST}:6379/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
     }
 }
