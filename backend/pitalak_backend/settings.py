@@ -164,9 +164,9 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'collected_static'
 
-# источник статики для dev
+# Источник статики для dev
 STATICFILES_DIRS = [
-    BASE_DIR / 'static',
+    # BASE_DIR / 'static',
 ]
 
 MEDIA_URL = 'media/'

@@ -23,7 +23,7 @@ def get_sms_balance(request):
     Контекстный процессор, использующий метод get_balance клиента.
     """
     if not settings.DEBUG:
-        CACHE_KEY = 'sms_provider_balance_display'
+        CACHE_KEY = 'sms_provider_balance'
         balance_display = cache.get(CACHE_KEY)
 
         if balance_display is None and SMS_CLIENT:

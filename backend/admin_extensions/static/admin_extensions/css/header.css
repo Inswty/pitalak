@@ -1,0 +1,15 @@
+/* Базовый стиль для иконки */
+.refresh-btn {
+    color: #ffffff !important; 
+    transition: color 0.1s ease; /* Плавный переход */
+}
+
+/* Стиль при наведении (hover) */
+.refresh-btn:hover {
+    color: rgb(49, 49, 252) !important; 
+}
+
+/* Стиль при нажатии (active) */
+.refresh-btn:active {
+    color: #f83a3a !important;
+}

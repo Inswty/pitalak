@@ -6,6 +6,7 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('admin_ext/', include('admin_extensions.urls')),
     path('api/', include('api.urls')),
 ]
 
@@ -14,5 +15,5 @@ if settings.DEBUG:
         settings.MEDIA_URL, document_root=settings.MEDIA_ROOT
     )
     urlpatterns += static(
-        settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0]
+        settings.STATIC_URL, document_root=settings.STATIC_ROOT
     )

@@ -1,6 +1,11 @@
 {% extends "admin/base.html" %} 
 {% load static %}
 
+{% block extrahead %}
+    {{ block.super }}
+    <link rel="stylesheet" type="text/css" href="{% static 'admin_extensions/css/header.css' %}">
+{% endblock %}
+
 {% block title %}{{ title }} | {{ 'PITALAK site admin' }}{% endblock %}
 
 {% block branding %}
@@ -8,20 +13,40 @@
         <a href="{% url 'admin:index' %}">{{ 'PITALAK Администрирование' }}</a>
     </h1>
     
-    {# <-- Добавляем блок с балансом сразу после заголовка #}
+    {# <!-- Добавляем блок с балансом после заголовка --> #}
     {% if SMS_PROVIDER_BALANCE %}
-        <span style="
+        <div style="
             font-size: 14px; 
             margin-left: 20px; 
-            padding: 5px 10px;
-            background-color:rgb(69, 77, 72);
-            color:rgb(80, 207, 158); 
+            background-color: rgb(69, 77, 72);
             border-radius: 4px;
-            display: inline-block;
-            vertical-align: top;
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 0 3px 10px;
+            vertical-align: middle;
         ">
-            {{ SMS_PROVIDER_BALANCE }} 
-        </span>
+            {# Текст баланса #}
+            <span style="
+                color: rgb(80, 207, 158); 
+                padding-right: 0px;
+                line-height: 1;
+            ">
+                {{ SMS_PROVIDER_BALANCE }} 
+            </span>
+            
+            {# Кнопка принудительного обновления #}
+            <a href="{% url 'admin_extensions:refresh_sms_balance' %}?next={{ request.path }}"
+            title="Обновить баланс"
+            class="refresh-btn"  style="
+                    /* Стили кнопки */
+                    font-size: 16px; 
+                    text-decoration: none; 
+                    padding: 0 6px 0 6px;
+                    line-height: 1;
+                    margin-top: -2px;
+            ">
+            &#x27F3; </a>
+        </div>
     {% endif %}
 {% endblock %}
 
