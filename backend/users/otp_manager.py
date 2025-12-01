@@ -9,6 +9,8 @@ from django_redis import get_redis_connection
 from rest_framework.exceptions import Throttled
 from redis.exceptions import ConnectionError, RedisError
 
+from users.tasks import send_otp_sms_task
+
 
 logger = logging.getLogger(__name__)
 
@@ -140,12 +142,16 @@ class OTPManager:
 
     @classmethod
     def request_otp(cls, phone: str) -> str:
-        """Полный процесс запроса OTP с проверкой лимитов."""
-        # Проверяем лимиты
+        """
+        Полный процесс запроса OTP с проверкой лимитов
+        и асинхронной отправкой.
+        """
+        # 1. Проверка лимитов
         cls.can_send_otp(phone)
-        # Генерируем OTP
+        # 2. Генерация и сохранение
         otp = OTPManager.generate_otp()
-        # Регистрируем запрос и сохраняем OTP
         cls.register_otp_request(phone)
         cls.save_otp(phone, otp)
-        return otp
+        # 3. Отправка (асинхронная)
+        send_otp_sms_task.delay(phone.as_e164, otp)
+        return otp  # Возвращаем OTP для логирования в DEV

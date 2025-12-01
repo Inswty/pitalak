@@ -7,9 +7,8 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
 
-from core.managers.otp_manager import OTPManager
+from users.otp_manager import OTPManager
 from users.models import User
-from .services.sms_provider import TargetSMSClient
 from .serializers import OTPRequestSerializer, OTPVerifySerializer
 
 logger = logging.getLogger(__name__)
@@ -34,25 +33,18 @@ class SendOTPAPIView(APIView):
                 status=status.HTTP_429_TOO_MANY_REQUESTS
             )
         except Exception as e:
-            logger.error('Ошибка при отправке OTP: %s', e)
-            raise ValidationError({'detail': 'Не удалось отправить OTP',
-                                  'error': str(e)})
-
-        if not settings.DEBUG:
-            message_id = TargetSMSClient().send_sms(phone=phone, otp=otp)
-        else:
+            # Ловим ошибки, не связанные с Redis
+            logger.error('Критическая ошибка менеджера OTP: %s', e)
+            raise ValidationError({'detail': 'Не удалось отправить OTP'})
+        if settings.DEBUG:
+            # Отображаем OTP только режиме разработки
             print(f'DEV MODE: OTP на номер {phone}: {otp}')
-            message_id = 'dev_mode'
 
-        status_msg = 'OTP отправлен на номер: {}'.format(phone)
-        if message_id or settings.DEBUG:
-            logger.info('OTP "%s" отправлен на %s', otp, phone)
-            return Response({
-                'detail': status_msg,
-                'TTL': settings.OTP_TTL_SECONDS
-            }, status=status.HTTP_200_OK)
-        return Response({'detail': 'Ошибка при отправке OTP.'},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logger.info('Запрос OTP принят для %s', phone)
+        return Response({
+            'detail': 'OTP запрошен. Проверьте ваш телефон.',
+            'TTL': settings.OTP_TTL_SECONDS
+        }, status=status.HTTP_200_OK)
 
 
 class VerifyOTPAPIView(APIView):

@@ -5,7 +5,7 @@ volumes:
   
 services:
   db:
-    image: postgres:13
+    image: postgres:16
     env_file: .env
     volumes:
       - pg_data:/var/lib/postgresql/data
@@ -13,8 +13,9 @@ services:
     build: ./backend/
     env_file: .env
     volumes:
+      - ./backend/app:/app/app  # Чтобы изменения отражались сразу
       - static:/backend_static
-      - media:/media/ 
+      - media:/media/
       - ./data:/data
     depends_on:
       - db
@@ -23,6 +24,15 @@ services:
     image: redis:7
     ports:
       - "6379:6379"
+  celery_worker:
+    build: ./backend/
+    env_file: .env
+    command: celery -A pitalak_backend worker -l info
+    environment:
+      - REDIS_HOST=redis
+      - DJANGO_SETTINGS_MODULE=pitalak_backend.settings
+    depends_on:
+      - redis
   gateway:
     build: ./nginx/
     env_file: .env

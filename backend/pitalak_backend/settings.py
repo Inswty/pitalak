@@ -85,12 +85,28 @@ REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': f'redis://{REDIS_HOST}:6379/1',
+        'LOCATION': f'redis://{REDIS_HOST}:6379/0',
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
     }
 }
+
+# Настройки CELERY
+# ==================================
+CELERY_BROKER_URL = f'redis://{REDIS_HOST}:6379/1'  # БД очереди задач
+CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:6379/2'  # БД хранения результатов
+
+# Общие настройки Celery
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Yekaterinburg'
+CELERY_TASK_ALWAYS_EAGER = True if DEBUG else False  # Для Prod - False
+# Ретраил при ошибках
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_RETRY_DELAY = 10  # Секунд
+CELERY_TASK_MAX_RETRIES = 3
 
 # Database
 USE_SQLITE = os.getenv('USE_SQLITE', 'False') == 'True'
@@ -159,7 +175,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'collected_static'
@@ -169,12 +184,11 @@ STATICFILES_DIRS = [
     # BASE_DIR / 'static',
 ]
 
-MEDIA_URL = 'media/'
-MEDIA_ROOT = Path('media')
+MEDIA_URL = '/media/'
+MEDIA_ROOT = Path('/media')
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
 
 # Настройки логирования
 LOG_DIR = os.path.join(BASE_DIR, 'logs')

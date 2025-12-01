@@ -6,6 +6,7 @@
 - Django
 - Django REST Framework
 - PostgreSQL
+- Celery
 - Redis
 - Simple JWT
 - JavaScript
