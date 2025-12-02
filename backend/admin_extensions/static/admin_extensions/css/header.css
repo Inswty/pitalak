@@ -1,5 +1,26 @@
+.balance-wrapper {
+    font-size: 14px; 
+    margin-left: 20px; 
+    background-color: rgb(69, 77, 72);
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 0 3px 10px;
+}
+
+.balance-text {
+    color: rgb(80, 207, 158); 
+    padding-right: 0px;
+    line-height: 1;
+}
+
 /* Базовый стиль для иконки */
 .refresh-btn {
+    font-size: 16px; 
+    text-decoration: none; 
+    padding: 0 6px 0 6px;
+    line-height: 1;
+    margin-top: -2px;
     color: #ffffff !important; 
     transition: color 0.1s ease; /* Плавный переход */
 }
