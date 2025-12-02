@@ -301,14 +301,6 @@ class NutrientInIngredient(models.Model):
         help_text='Количество нутриента на 100 г ингредиента (в граммах)'
     )
 
-    def clean(self):
-        super().clean()
-        if self.amount_per_100g is not None and self.amount_per_100g > 100:
-            raise ValidationError(
-                'Количество нутриента не может быть больше 100 г'
-                ' на 100 г ингредиента'
-            )
-
     class Meta:
         verbose_name = 'нутриент в ингредиенте'
         verbose_name_plural = 'нутриенты в ингредиентах'

@@ -13,7 +13,7 @@ services:
     build: ./backend/
     env_file: .env
     volumes:
-      - ./backend/app:/app/app  # Чтобы изменения отражались сразу
+      - ./backend/src:/app  # Чтобы изменения отражались сразу
       - static:/backend_static
       - media:/media/
       - ./data:/data

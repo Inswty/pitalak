@@ -37,27 +37,8 @@ class NutritionFieldsMixin:
         return cleaned_data
 
 
-class NutrientInIngredientInlineFormSet(BaseInlineFormSet):
-    """Проверяет, что сумма нутриентов не превышает 100 г."""
-
-    def clean(self):
-        super().clean()
-        total = 0
-        for form in self.forms:
-            if form.cleaned_data and not form.cleaned_data.get(
-                'DELETE', False
-            ):
-                total += form.cleaned_data.get('amount_per_100g', 0)
-        if total > 100:
-            raise ValidationError(
-                'Сумма нутриентов не может быть больше 100 г '
-                'на 100 г ингредиента.'
-            )
-
-
 class NutrientInIngredientInline(admin.TabularInline):
     model = NutrientInIngredient
-    formset = NutrientInIngredientInlineFormSet
     extra = 1
     autocomplete_fields = ('nutrient',)
     readonly_fields = ('nutrient_measurement_unit',)
