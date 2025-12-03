@@ -33,7 +33,7 @@ class OTPManager:
         otp = ''.join(
             secrets.choice(string.digits) for _ in range(settings.OTP_LENGTH)
         )
-        logger.debug('Сгенерирован OTP: %s', otp)
+        logger.info('Сгенерирован OTP: %s', otp)
         return otp
 
     # Ключи для Redis

@@ -77,8 +77,8 @@ OTP_TTL_SECONDS = 300  # 5 минут
 MAX_OTP_ATTEMPTS = 3
 MAX_OTP_REQUESTS_PER_HOUR = int(os.getenv('MAX_OTP_REQUESTS_PER_HOUR', 3))
 OTP_COOLDOWN_SECONDS = 60  # 1 минута между запросами
-OTP_TEXT = 'Ваш код подтверждения: {otp}'
-SMS_BALANCE_CACHE_TIMEOUT = 43200  # Время кеширования баланса в секундах
+OTP_TEXT = 'Код для входа: {otp}'
+SMS_BALANCE_CACHE_TIMEOUT = 60 * 60 * 24 * 3  # Время кеширования баланса в секундах
 
 # Cache settings for OTP
 REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
@@ -103,10 +103,6 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Yekaterinburg'
 CELERY_TASK_ALWAYS_EAGER = True if DEBUG else False  # Для Prod - False
-# Ретраил при ошибках
-CELERY_TASK_ACKS_LATE = True
-CELERY_TASK_RETRY_DELAY = 10  # Секунд
-CELERY_TASK_MAX_RETRIES = 3
 
 # Database
 USE_SQLITE = os.getenv('USE_SQLITE', 'False') == 'True'

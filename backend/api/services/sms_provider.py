@@ -18,7 +18,7 @@ class TargetSMSClient:
 
     def send_sms(self, phone: str, otp: str):
         """Отправка SMS с обработкой ошибок."""
-        phone = phone.as_e164.lstrip('+')
+        phone = phone.lstrip('+')
         payload = {
             "security": {
                 "login": self.login,
@@ -58,27 +58,32 @@ class TargetSMSClient:
             )
             response.raise_for_status()   # Проверка HTTP-ошибок (4xx, 5xx)
             # Возвращаем десериализованный JSON-ответ
-            result = response.json()
-            if result.get('status') == 'send':
+            result = response.json().get('sms', [])
+            if not result:
+                # Провайдер не вернул массив 'sms' - это ошибка
+                logger.error(
+                    'Ошибка SMS провайдера для %s: Невалидный формат ответа - '
+                    'нет массива "sms". %s', phone, result
+                )
+                return None
+            message_info = result[0]
+            if message_info.get('action') == 'send':
+                message_id = message_info.get('id_sms')
                 logger.info('SMS отправлено на %s, message_id=%s',
-                            phone, result.get('message_id'))
-                return result.get('message_id')
+                            phone, message_id)
+                return message_id
             else:
-                logger.error('Ошибка SMS провайдера для %s: %s',
-                             phone, result)
+                action_status = message_info.get('action', 'N/A')
+                logger.error('Ошибка SMS провайдера для %s: Статус "%s".'
+                             ' Ответ: %s', phone, action_status, result)
                 return None
 
-        except requests.exceptions.Timeout:
-            logger.error('Таймаут при отправке SMS на %s', phone)
-            return None
-        except requests.exceptions.ConnectionError:
-            logger.error('Ошибка соединения с SMS провайдером для %s', phone)
-            return None
-        except requests.exceptions.HTTPError as e:
-            logger.error('HTTP ошибка при отправке SMS на %s: %s', phone, e)
-            return None
         except requests.exceptions.RequestException as e:
-            logger.error('Ошибка сети при отправке SMS на %s: %s', phone, e)
+            status_code = getattr(
+                getattr(e, 'response', None), 'status_code', 'N/A'
+            )
+            logger.error('Ошибка сети/HTTP (%s) при отправке SMS на %s: %s',
+                         status_code, phone, e)
             return None
         except ValueError as e:
             logger.error('Невалидный JSON ответ от SMS провайдера для %s: %s',

@@ -2,8 +2,7 @@ import logging
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.cache import cache
-from django.http import HttpResponseRedirect
-from django.urls import reverse
+from django.shortcuts import redirect
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +16,8 @@ def refresh_sms_balance(request):
     cache.delete(SMS_BALANCE_CACHE_KEY)
 
     logger.info('Принудительное обновление баланса - '
-                'ключ кэша удален: sms_provider_balance;)'
+                'ключ кэша удален: sms_provider_balance'
                 )
-    return HttpResponseRedirect(
-        request.GET.get('next') or reverse('admin:index')
+    return redirect(
+        request.GET.get('next') or 'admin:index'
     )
