@@ -173,7 +173,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'collected_static'
+STATIC_ROOT = '/app/staticfiles'
 
 # Источник статики для dev
 STATICFILES_DIRS = [
