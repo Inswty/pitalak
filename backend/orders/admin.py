@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
+from django.forms.models import BaseInlineFormSet
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import path
@@ -201,8 +202,32 @@ class ShoppingCartAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
             self.message_user(request, str(e), level=messages.ERROR)
 
 
+class ProductInOrderInlineFormSet(BaseInlineFormSet):
+    """
+    Проверяет, что не существует двух одинаковых товаров среди всех
+    позиций, которые будут сохранены в заказе (позволяет обмен).
+    """
+    def clean(self):
+        super().clean()
+
+        products = []
+        for form in self.forms:
+            # Проверяем, что форма валидна и не помечена на удаление
+            if form.is_valid() and not form.cleaned_data.get('DELETE', False):
+                product = form.cleaned_data.get('product')
+                if product:
+                    # Поверяем дубликаты ВНУТРИ этого же запроса (обмена)
+                    if product in products:
+                        raise ValidationError(
+                            f'Товар "{product}" дублируется в инлайн-формах.',
+                            code='duplicate_product_in_formset'
+                        )
+                    products.append(product)
+
+
 class ProductInOrderInline(admin.TabularInline):
     model = OrderItem
+    formset = ProductInOrderInlineFormSet
     extra = 1
     readonly_fields = ('line_total',)
     autocomplete_fields = ('product',)

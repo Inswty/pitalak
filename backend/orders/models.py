@@ -222,12 +222,6 @@ class OrderItem(models.Model):
     class Meta:
         verbose_name = 'Позиция в заказе'
         verbose_name_plural = 'Позиции в заказах'
-        constraints = [
-            models.UniqueConstraint(
-                fields=('order', 'product'),
-                name='unique_product_in_order'
-            )
-        ]
 
     def __str__(self):
         return f'{self.product} × {self.quantity}'
