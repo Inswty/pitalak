@@ -19,7 +19,7 @@ services:
     volumes:
       - ./backend:/app # Чтобы изменения отражались сразу
       - static:/app/staticfiles
-      - media:/media/
+      - media:/app/media/
       - ./data:/data
     depends_on:
       - db

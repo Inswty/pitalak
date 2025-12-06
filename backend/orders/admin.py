@@ -219,7 +219,7 @@ class ProductInOrderInlineFormSet(BaseInlineFormSet):
                     # Поверяем дубликаты ВНУТРИ этого же запроса (обмена)
                     if product in products:
                         raise ValidationError(
-                            f'Товар "{product}" дублируется в инлайн-формах.',
+                            f'Товар "{product}" дублируется в заказе.',
                             code='duplicate_product_in_formset'
                         )
                     products.append(product)
