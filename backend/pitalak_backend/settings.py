@@ -193,10 +193,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Настройки логирования
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
 os.makedirs(LOG_DIR, exist_ok=True)
+LOG_FORMATTERS = {
+    'verbose': {
+        'format': '[{asctime}] {levelname} {name}: {message}',
+        'style': '{',
+        'datefmt': '%d-%m-%Y %H:%M:%S',
+    },
+}
+
 if DEBUG:
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': False,
+        'formatters': LOG_FORMATTERS,
         'handlers': {
             'file': {
                 'level': 'DEBUG',
@@ -205,16 +214,14 @@ if DEBUG:
                 'formatter': 'verbose',
                 'encoding': 'utf-8',
             },
-        },
-        'formatters': {
-            'verbose': {
-                'format': '[{asctime}] {levelname} {name}: {message}',
-                'style': '{',
-                'datefmt': '%d-%m-%Y %H:%M:%S',
+            'telegram': {
+                'level': 'ERROR',
+                'class': 'core.bot_telegram_logger.TelegramHandler',
+                'formatter': 'verbose',
             },
         },
         'root': {
-            'handlers': ['file'],
+            'handlers': ['file', 'telegram'],
             'level': 'DEBUG',
         },
     }
@@ -222,14 +229,20 @@ else:
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': False,
+        'formatters': LOG_FORMATTERS,
         'handlers': {
             'db': {
                 'level': 'INFO',
                 'class': 'django_db_logger.db_log_handler.DatabaseLogHandler',
             },
+            'telegram': {
+                'level': 'WARNING',
+                'class': 'core.bot_telegram_logger.TelegramHandler',
+                'formatter': 'verbose',
+            },
         },
         'root': {
-            'handlers': ['db'],
+            'handlers': ['db', 'telegram'],
             'level': 'INFO',
         },
     }
