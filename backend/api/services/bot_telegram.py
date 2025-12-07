@@ -1,15 +1,13 @@
 import logging
-import os
 
-from dotenv import load_dotenv
+from django.conf import settings
 from telebot import TeleBot
 from telebot.apihelper import ApiTelegramException
 
 logger = logging.getLogger(__name__)
-load_dotenv()
 
-TELEGRAM_TOKEN = os.getenv('BOT_TOKEN')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+TELEGRAM_TOKEN = settings.TELEGRAM_BOT_TOKEN
+TELEGRAM_CHAT_ID = settings.TELEGRAM_CHAT_ID
 
 bot = TeleBot(token=TELEGRAM_TOKEN)
 
@@ -34,8 +32,8 @@ def send_telegram_message(message):
     logger.info('Отправка сообщения в чат-Telegram')
     try:
         bot.send_message(TELEGRAM_CHAT_ID, f'Pitalak:\n{message}')
-    except ApiTelegramException('Ошибка при отправке сообщения'):
-        return False
+    except ApiTelegramException as e:
+        logger.error(f'Ошибка при отправке сообщения: {e}')
     else:
         logger.debug('Сообщение успешно отправлено')
         return True

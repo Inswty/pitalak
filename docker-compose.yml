@@ -20,7 +20,6 @@ services:
       - ./backend:/app # Чтобы изменения отражались сразу
       - static:/app/staticfiles
       - media:/app/media/
-      - ./data:/data
     depends_on:
       - db
       - redis

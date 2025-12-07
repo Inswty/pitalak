@@ -104,6 +104,10 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Yekaterinburg'
 CELERY_TASK_ALWAYS_EAGER = True if DEBUG else False  # Для Prod - False
 
+# Secrets bot_telegram
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+
 # Database
 USE_SQLITE = os.getenv('USE_SQLITE', 'False') == 'True'
 if USE_SQLITE:

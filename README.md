@@ -10,6 +10,8 @@
 - Redis
 - Simple JWT
 - JavaScript
+- HTML
+- CSS
 - Gunicorn
 - Nginx
 - Docker Compose
