@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.utils import timezone
@@ -72,6 +72,11 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f'{self.product} × {self.quantity}'
+
+
+class OrderCounters(models.Model):
+    last_reset_year = models.PositiveBigIntegerField()
+    orders_in_year = models.PositiveIntegerField()
 
 
 class Order(models.Model):
@@ -169,14 +174,23 @@ class Order(models.Model):
 
     def generate_order_number(self):
         current_year = timezone.now().year % 100
-        last_order = Order.objects.filter(
-            order_number__startswith=f'{current_year}'
-        ).order_by('id').last()
-        if last_order:
-            last_number = int(last_order.order_number[2:])
-        else:
-            last_number = 0
-        return f'{current_year}{last_number + 1}'
+        with transaction.atomic():
+            counter_obj, _ = (
+                OrderCounters.objects.select_for_update().get_or_create(
+                    id=1,
+                    defaults={'last_reset_year': current_year,
+                              'orders_in_year': 0}
+                )
+            )
+            if current_year > counter_obj.last_reset_year:
+                counter_obj.orders_in_year = 0
+                counter_obj.last_reset_year = current_year
+                counter_obj.save()
+            OrderCounters.objects.filter(id=1).update(
+                orders_in_year=models.F('orders_in_year') + 1
+            )
+            counter_obj.refresh_from_db()
+            return f'{current_year:02d}{str(counter_obj.orders_in_year)}'
 
     class Meta:
         verbose_name = 'Заказ'
