@@ -108,7 +108,7 @@ class Order(models.Model):
     products = models.ManyToManyField(
         Product,
         through='OrderItem',
-        related_name='orders',
+        related_name='product_orders',
         verbose_name='Продукты'
     )
     created_at = models.DateTimeField('Создан', auto_now_add=True)
@@ -128,7 +128,7 @@ class Order(models.Model):
         'users.Address',
         on_delete=models.SET_NULL,
         null=True, blank=True,
-        related_name='orders',
+        related_name='delivery_orders',
         verbose_name='Адрес доставки'
     )
     comment = models.TextField(
