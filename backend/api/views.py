@@ -3,13 +3,18 @@ import logging
 from django.conf import settings
 from rest_framework import status, viewsets
 from rest_framework.exceptions import Throttled, ValidationError
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
 
+from products.models import Product
 from users.otp_manager import OTPManager
 from users.models import User
-from .serializers import OTPRequestSerializer, OTPVerifySerializer
+from .serializers import (
+    OTPRequestSerializer, OTPVerifySerializer, ProductListSerializer,
+    ProductDetailSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -81,3 +86,19 @@ class VerifyOTPAPIView(APIView):
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }
+
+
+class ProductViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only эндпойнт для Product API (list & retrieve)."""
+
+    permission_classes = (AllowAny,)
+    queryset = (
+        Product.objects
+        .select_related('category')
+        .prefetch_related('images', 'ingredients')
+    )
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return ProductDetailSerializer
+        return ProductListSerializer
