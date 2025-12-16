@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 class SendOTPAPIView(APIView):
     """Эндпоинт для запроса отправки OTP на телефон пользователя."""
 
+    permission_classes = (AllowAny,)
+
     def post(self, request, *args, **kwargs):
         serializer = OTPRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -54,6 +56,8 @@ class SendOTPAPIView(APIView):
 
 class VerifyOTPAPIView(APIView):
     """Эндпоинт для проверки OTP и выдачи JWT-токенов."""
+
+    permission_classes = (AllowAny,)
 
     def post(self, request, *args, **kwargs):
         serializer = OTPVerifySerializer(data=request.data)
@@ -95,10 +99,24 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = (
         Product.objects
         .select_related('category')
-        .prefetch_related('images', 'ingredients')
+        .prefetch_related(
+            'images', 'ingredients', 'ingredients__nutrient_links__nutrient'
+        )
     )
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return ProductDetailSerializer
         return ProductListSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action == 'retrieve':
+            # Для retrieve добавляем prefetch нутриентов ингредиентов
+            qs = qs.prefetch_related(
+                'product_ingredients__ingredient__nutrient_links__nutrient'
+            )
+        else:
+            # Только доступные продукты
+            qs = qs.filter(is_available=True)
+        return qs.order_by('id')

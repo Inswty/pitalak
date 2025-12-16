@@ -83,7 +83,8 @@ class Ingredient(models.Model):
         Nutrient,
         through='NutrientInIngredient',
         verbose_name='Нутриент',
-        help_text='Выберите нутриенты и укажите их количество'
+        help_text='Выберите нутриенты и укажите их количество',
+        related_name='ingredients'
     )
 
     @property

@@ -216,14 +216,9 @@ if DEBUG:
                 'formatter': 'verbose',
                 'encoding': 'utf-8',
             },
-            'telegram': {
-                'level': 'ERROR',
-                'class': 'core.bot_telegram_logger.TelegramHandler',
-                'formatter': 'verbose',
-            },
         },
         'root': {
-            'handlers': ['file', 'telegram'],
+            'handlers': ['file'],
             'level': 'DEBUG',
         },
     }
