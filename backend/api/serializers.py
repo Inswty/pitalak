@@ -119,7 +119,7 @@ class ProductDetailSerializer(BaseProductSerializer):
         Возвращает ингредиенты продукта с указанием их количества.
         """
         result = []
-        # Используем prefetch_related через product_ingredients
+        # select_related - чтобы избежать N+1
         for link in obj.product_ingredients.select_related('ingredient'):
             ingredient = link.ingredient
             data = IngredientInProductSerializer(ingredient).data

@@ -171,7 +171,7 @@ class Product(models.Model):
         'Цена',
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES,
-        validators=[MinValueValidator(0.009)],
+        validators=[MinValueValidator(Decimal('0.009'))],
         default=0.00,
         help_text='Цена, руб.'
     )
