@@ -1,11 +1,10 @@
 import logging
 from django.conf import settings
 from djoser.serializers import UserCreateSerializer
-from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
 
-from products.models import Ingredient, Nutrient, Product, ProductImage
+from products.models import Category, Ingredient, Product, ProductImage
 from users.models import User
 
 logger = logging.getLogger(__name__)                                    # --- ??? ---
@@ -26,7 +25,7 @@ class BaseOTPSerializer(serializers.Serializer):
 class OTPRequestSerializer(BaseOTPSerializer):
     """Сериализатор для запроса отправки OTP на номер телефона."""
 
-    pass  # используется только phone из BaseOTPSerializer
+    pass  # Используется только phone из BaseOTPSerializer
 
 
 class OTPVerifySerializer(BaseOTPSerializer):
@@ -51,13 +50,16 @@ class OTPVerifySerializer(BaseOTPSerializer):
 
 
 class CustomUserCreateSerializer(UserCreateSerializer):
+    """
+    Переопределяет стандартный UserCreateSerializer, ограничивает
+    поля только полем 'phone'.
+    """
     class Meta(UserCreateSerializer.Meta):
         model = User
         fields = ('phone',)
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
-    image = Base64ImageField()
 
     class Meta:
         model = ProductImage
@@ -91,7 +93,7 @@ class BaseProductSerializer(serializers.ModelSerializer):
 class ProductListSerializer(BaseProductSerializer):
 
     class Meta(BaseProductSerializer.Meta):
-        pass
+        pass  # Используется из BaseProductSerializer
 
 
 class ProductDetailSerializer(BaseProductSerializer):
@@ -149,3 +151,18 @@ class ProductDetailSerializer(BaseProductSerializer):
                     nutrients[key]['amount_per_100g'] += link.amount_per_100g
 
         return list(nutrients.values())
+
+
+class CategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Category
+        fields = ('name', 'slug')
+
+
+class CategoryDetailSerializer(serializers.ModelSerializer):
+    products = ProductListSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Category
+        fields = ('id', 'name', 'slug', 'products')

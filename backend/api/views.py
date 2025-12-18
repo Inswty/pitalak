@@ -8,12 +8,12 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
 
-from products.models import Product
+from products.models import Category, Product
 from users.otp_manager import OTPManager
 from users.models import User
 from .serializers import (
-    OTPRequestSerializer, OTPVerifySerializer, ProductListSerializer,
-    ProductDetailSerializer,
+    CategorySerializer, CategoryDetailSerializer, OTPRequestSerializer,
+    OTPVerifySerializer, ProductListSerializer, ProductDetailSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -90,6 +90,26 @@ class VerifyOTPAPIView(APIView):
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }
+
+
+class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only эндпойнт для Category API (list & retrieve)."""
+
+    permission_classes = (AllowAny,)
+    queryset = Category.objects.filter(is_available=True)
+    lookup_field = 'slug'
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return CategoryDetailSerializer
+        return CategorySerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # Для retrieve добавляем prefetch нутриентов ингредиентов
+        if self.action == 'retrieve':
+            return qs.prefetch_related('products')
+        return qs
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
