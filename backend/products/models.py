@@ -258,7 +258,7 @@ class IngredientInProduct(models.Model):
         verbose_name='Ингредиент'
     )
     amount = models.DecimalField(
-        verbose_name='Количество на 100 г.',
+        verbose_name='Количество на 100 г. продукта',
         max_digits=6,
         decimal_places=2,
         validators=(MinValueValidator(0.009),),
@@ -295,7 +295,7 @@ class NutrientInIngredient(models.Model):
         verbose_name='Ингредиент'
     )
     amount_per_100g = models.DecimalField(
-        verbose_name='Количество на 100 г.',
+        verbose_name='Количество на 100 г. ингредиента',
         max_digits=6,
         decimal_places=3,
         validators=(MinValueValidator(0.0009),),

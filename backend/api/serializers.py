@@ -1,4 +1,6 @@
 import logging
+from decimal import Decimal, ROUND_HALF_UP
+
 from django.conf import settings
 from djoser.serializers import UserCreateSerializer
 from rest_framework import serializers
@@ -25,7 +27,7 @@ class BaseOTPSerializer(serializers.Serializer):
 class OTPRequestSerializer(BaseOTPSerializer):
     """Сериализатор для запроса отправки OTP на номер телефона."""
 
-    pass  # Используется только phone из BaseOTPSerializer
+    pass
 
 
 class OTPVerifySerializer(BaseOTPSerializer):
@@ -93,7 +95,7 @@ class BaseProductSerializer(serializers.ModelSerializer):
 class ProductListSerializer(BaseProductSerializer):
 
     class Meta(BaseProductSerializer.Meta):
-        pass  # Используется из BaseProductSerializer
+        pass
 
 
 class ProductDetailSerializer(BaseProductSerializer):
@@ -121,35 +123,52 @@ class ProductDetailSerializer(BaseProductSerializer):
         Возвращает ингредиенты продукта с указанием их количества.
         """
         result = []
-        # select_related - чтобы избежать N+1
-        for link in obj.product_ingredients.select_related('ingredient'):
+        # .all() использует данные из prefetch
+        for link in obj.product_ingredients.all():
             ingredient = link.ingredient
-            data = IngredientInProductSerializer(ingredient).data
-            data['amount'] = link.amount
-            result.append(data)
+            result.append({
+                'name': ingredient.name,
+                'amount': link.amount,
+            })
         return result
 
     def get_nutrients(self, obj):
         """
         Возвращает агрегированные нутриенты ингредиентов продукта.
         """
+        links = obj.product_ingredients.all()
+        if not links:
+            return []
+        total_weight = sum(Decimal(link.amount) for link in links)
+        if total_weight == 0:
+            return []
         nutrients = {}
 
-        for ingredient in obj.ingredients.all():
-            for link in ingredient.nutrient_links.all():
-                nutrient = link.nutrient
+        for link in links:
+            ingredient = link.ingredient
+            # Доля ингредиента в продукте
+            ratio = Decimal(link.amount) / total_weight
+            # nutrient_links уже в памяти благодаря prefetch_related
+            for n_link in ingredient.nutrient_links.all():
+                nutrient = n_link.nutrient
                 key = nutrient.id
 
                 if key not in nutrients:
                     nutrients[key] = {
                         'name': nutrient.name,
-                        'amount_per_100g': link.amount_per_100g,
+                        'amount_per_100g': n_link.amount_per_100g * ratio,
                         'measurement_unit': nutrient.measurement_unit,
                         'rda': nutrient.rda,
                     }
                 else:
-                    nutrients[key]['amount_per_100g'] += link.amount_per_100g
-
+                    nutrients[key]['amount_per_100g'] += (
+                        n_link.amount_per_100g * ratio
+                    )
+        for nutrient in nutrients.values():
+            nutrient['amount_per_100g'] = nutrient['amount_per_100g'].quantize(
+                Decimal('0.001'),
+                rounding=ROUND_HALF_UP
+            )
         return list(nutrients.values())
 
 

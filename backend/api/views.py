@@ -106,9 +106,12 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        # Для retrieve добавляем prefetch нутриентов ингредиентов
+        # Для retrieve добавляем prefetch
         if self.action == 'retrieve':
-            return qs.prefetch_related('products')
+            return qs.prefetch_related(
+                'products__images',
+                'products__category'
+            )
         return qs
 
 
@@ -119,9 +122,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = (
         Product.objects
         .select_related('category')
-        .prefetch_related(
-            'images', 'ingredients', 'ingredients__nutrient_links__nutrient'
-        )
+        .prefetch_related('images')
     )
 
     def get_serializer_class(self):
@@ -132,11 +133,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         if self.action == 'retrieve':
-            # Для retrieve добавляем prefetch нутриентов ингредиентов
-            qs = qs.prefetch_related(
+            return qs.prefetch_related(
                 'product_ingredients__ingredient__nutrient_links__nutrient'
             )
-        else:
-            # Только доступные продукты
-            qs = qs.filter(is_available=True)
-        return qs.order_by('id')
+        return qs.filter(is_available=True).order_by('id')
