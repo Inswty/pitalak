@@ -200,7 +200,7 @@ class Product(models.Model):
                         'ingredient'
                     ):
                         ingredient = link.ingredient
-                        ratio = Decimal(link.amount) / Decimal('100')
+                        ratio = Decimal(link.amount_per_100g) / Decimal('100')
                         proteins += ingredient.proteins * ratio
                         fats += ingredient.fats * ratio
                         carbs += ingredient.carbs * ratio
@@ -257,7 +257,7 @@ class IngredientInProduct(models.Model):
         related_name='product_links',
         verbose_name='Ингредиент'
     )
-    amount = models.DecimalField(
+    amount_per_100g = models.DecimalField(
         verbose_name='Количество на 100 г. продукта',
         max_digits=6,
         decimal_places=2,
@@ -276,7 +276,7 @@ class IngredientInProduct(models.Model):
         )
 
     def __str__(self):
-        return f'{self.ingredient} — {self.amount} ({self.product})'
+        return f'{self.ingredient} — {self.amount_per_100g} ({self.product})'
 
 
 class NutrientInIngredient(models.Model):

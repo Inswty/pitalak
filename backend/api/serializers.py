@@ -69,13 +69,14 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 
 class IngredientInProductSerializer(serializers.ModelSerializer):
-    amount = serializers.DecimalField(max_digits=6, decimal_places=2,
-                                      read_only=True)
+    amount_per_100g = serializers.DecimalField(max_digits=6, decimal_places=2,
+                                               read_only=True)
 
     class Meta:
         model = Ingredient
         fields = (
-            'name', 'proteins', 'fats', 'carbs', 'energy_value', 'amount'
+            'name', 'proteins', 'fats', 'carbs', 'energy_value',
+            'amount_per_100g'
         )
 
 
@@ -128,7 +129,7 @@ class ProductDetailSerializer(BaseProductSerializer):
             ingredient = link.ingredient
             result.append({
                 'name': ingredient.name,
-                'amount': link.amount,
+                'amount_per_100g': link.amount_per_100g,
             })
         return result
 
@@ -139,7 +140,7 @@ class ProductDetailSerializer(BaseProductSerializer):
         links = obj.product_ingredients.all()
         if not links:
             return []
-        total_weight = sum(Decimal(link.amount) for link in links)
+        total_weight = sum(Decimal(link.amount_per_100g) for link in links)
         if total_weight == 0:
             return []
         nutrients = {}
@@ -147,7 +148,7 @@ class ProductDetailSerializer(BaseProductSerializer):
         for link in links:
             ingredient = link.ingredient
             # Доля ингредиента в продукте
-            ratio = Decimal(link.amount) / total_weight
+            ratio = Decimal(link.amount_per_100g) / total_weight
             # nutrient_links уже в памяти благодаря prefetch_related
             for n_link in ingredient.nutrient_links.all():
                 nutrient = n_link.nutrient

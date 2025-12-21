@@ -171,7 +171,7 @@ class ProductIngredientInlineFormSet(BaseInlineFormSet):
             if form.cleaned_data and not form.cleaned_data.get(
                 'DELETE', False
             ):
-                total += form.cleaned_data.get('amount', 0)
+                total += form.cleaned_data.get('amount_per_100g', 0)
         if total > 100:
             raise ValidationError(
                 'Сумма ингредиентов не может быть больше 100 г '
