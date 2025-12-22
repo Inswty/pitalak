@@ -181,8 +181,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class CategoryDetailSerializer(serializers.ModelSerializer):
-    products = ProductListSerializer(many=True, read_only=True)
 
     class Meta:
         model = Category
-        fields = ('id', 'name', 'slug', 'products')
+        fields = ('id', 'name', 'slug')

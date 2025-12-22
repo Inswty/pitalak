@@ -132,6 +132,10 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        category_slug = self.request.query_params.get('category')
+        if category_slug:
+            # Фильтр по слагу категории
+            qs = qs.filter(category__slug=category_slug)
         if self.action == 'retrieve':
             return qs.prefetch_related(
                 'product_ingredients__ingredient__nutrient_links__nutrient'
