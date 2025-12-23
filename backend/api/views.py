@@ -2,11 +2,11 @@ import logging
 
 from django.conf import settings
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import Throttled, ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.views import APIView
 
 from products.models import Category, Product
 from users.otp_manager import OTPManager
@@ -19,12 +19,13 @@ from .serializers import (
 logger = logging.getLogger(__name__)
 
 
-class SendOTPAPIView(APIView):
-    """Эндпоинт для запроса отправки OTP на телефон пользователя."""
+class OTPViewSet(viewsets.ViewSet):
+    """Эндпоинт для запроса на отправку/верификацию OTP."""
 
     permission_classes = (AllowAny,)
 
-    def post(self, request, *args, **kwargs):
+    @action(detail=False, methods=['post'])
+    def send(self, request):
         serializer = OTPRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -53,13 +54,8 @@ class SendOTPAPIView(APIView):
             'TTL': settings.OTP_TTL_SECONDS
         }, status=status.HTTP_200_OK)
 
-
-class VerifyOTPAPIView(APIView):
-    """Эндпоинт для проверки OTP и выдачи JWT-токенов."""
-
-    permission_classes = (AllowAny,)
-
-    def post(self, request, *args, **kwargs):
+    @action(detail=False, methods=['post'])
+    def verify(self, request):
         serializer = OTPVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -92,29 +88,6 @@ class VerifyOTPAPIView(APIView):
         }
 
 
-class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    """Read-only эндпойнт для Category API (list & retrieve)."""
-
-    permission_classes = (AllowAny,)
-    queryset = Category.objects.filter(is_available=True)
-    lookup_field = 'slug'
-
-    def get_serializer_class(self):
-        if self.action == 'retrieve':
-            return CategoryDetailSerializer
-        return CategorySerializer
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        # Для retrieve добавляем prefetch
-        if self.action == 'retrieve':
-            return qs.prefetch_related(
-                'products__images',
-                'products__category'
-            )
-        return qs
-
-
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only эндпойнт для Product API (list & retrieve)."""
 
@@ -141,3 +114,26 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
                 'product_ingredients__ingredient__nutrient_links__nutrient'
             )
         return qs.filter(is_available=True).order_by('id')
+
+
+class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only эндпойнт для Category API (list & retrieve)."""
+
+    permission_classes = (AllowAny,)
+    queryset = Category.objects.filter(is_available=True)
+    lookup_field = 'slug'
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return CategoryDetailSerializer
+        return CategorySerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # Для retrieve добавляем prefetch
+        if self.action == 'retrieve':
+            return qs.prefetch_related(
+                'products__images',
+                'products__category'
+            )
+        return qs
