@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'phonenumber_field',
     'rest_framework',
+    'drf_spectacular',
     'djoser',
     'django_db_logger',
     'nested_admin',
@@ -93,7 +94,6 @@ CACHES = {
 }
 
 # Настройки CELERY
-# ==================================
 CELERY_BROKER_URL = f'redis://{REDIS_HOST}:6379/1'  # БД очереди задач
 CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:6379/2'  # БД хранения результатов
 
@@ -154,6 +154,15 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 6,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'PITALAK API',
+    'DESCRIPTION': 'Документация эндпойнтов',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_PATCH': True,
 }
 
 SIMPLE_JWT = {
