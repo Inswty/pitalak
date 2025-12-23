@@ -11,6 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from products.models import Category, Product
 from users.otp_manager import OTPManager
 from users.models import User
+from .schemas import OTP_SEND_SCHEMA, OTP_VERIFY_SCHEMA
 from .serializers import (
     CategorySerializer, CategoryDetailSerializer, OTPRequestSerializer,
     OTPVerifySerializer, ProductListSerializer, ProductDetailSerializer,
@@ -24,6 +25,7 @@ class OTPViewSet(viewsets.ViewSet):
 
     permission_classes = (AllowAny,)
 
+    @OTP_SEND_SCHEMA
     @action(detail=False, methods=['post'])
     def send(self, request):
         serializer = OTPRequestSerializer(data=request.data)
@@ -45,7 +47,7 @@ class OTPViewSet(viewsets.ViewSet):
             logger.error('Критическая ошибка менеджера OTP: %s', e)
             raise ValidationError({'detail': 'Не удалось отправить OTP'})
         if settings.DEBUG:
-            # Отображаем OTP только режиме разработки
+            # Отображаем OTP только в режиме разработки
             print(f'DEV MODE: OTP на номер {phone}: {otp}')
 
         logger.info('Запрос OTP принят для %s', phone)
@@ -54,6 +56,7 @@ class OTPViewSet(viewsets.ViewSet):
             'TTL': settings.OTP_TTL_SECONDS
         }, status=status.HTTP_200_OK)
 
+    @OTP_VERIFY_SCHEMA
     @action(detail=False, methods=['post'])
     def verify(self, request):
         serializer = OTPVerifySerializer(data=request.data)
