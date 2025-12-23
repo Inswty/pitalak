@@ -37,6 +37,33 @@ class NutritionFieldsMixin:
         return cleaned_data
 
 
+class ProductAdminDisplayMixin:
+    """Общая логика для ModelAdmin и Inline классов продукта."""
+
+    @admin.display(description='Превью')
+    def image_preview(self, obj):
+        # Используем .all()[0] для поддержки prefetch_related
+        images = obj.images.all()
+        first_image = images[0] if images else None
+        if first_image and first_image.image:
+            return format_html(
+                '<img src="{}" width="60" style="border-radius:4px;">',
+                first_image.image.url
+            )
+        return 'No image'
+
+    @admin.display(description='Ингредиенты')
+    def ingredients_list(self, obj):
+        # Используем .all() для поддержки prefetch_related
+        return ', '.join([i.name for i in obj.ingredients.all()])
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related(
+            'images',      # Оптимизируем превью
+            'ingredients'  # Оптимизируем список ингредиентов
+        )
+
+
 class NutrientInIngredientInline(admin.TabularInline):
     model = NutrientInIngredient
     extra = 1
@@ -102,6 +129,36 @@ class IngredientAdmin(admin.ModelAdmin):
                              if nutrient else None})
 
 
+class ProductInCategoryInline(ProductAdminDisplayMixin, admin.TabularInline):
+    model = Product
+    fields = (
+        'name',
+        'is_available',
+        'image_preview',
+        'price',
+        'ingredients_list',
+        'weight',
+    )
+    readonly_fields = (
+        'name',
+        'price',
+        'is_available',
+        'image_preview',
+        'ingredients_list',
+        'weight',
+    )
+    extra = 0
+    show_change_link = True
+
+    # Скрывает кнопку 'Добавить еще один'
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    # Запрещает удаление товаров отсюда
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = (
@@ -111,6 +168,7 @@ class CategoryAdmin(admin.ModelAdmin):
     )
     list_editable = ('is_available',)
     search_fields = ('name',)
+    inlines = (ProductInCategoryInline,)
     ordering = ('name',)
 
 
@@ -187,7 +245,7 @@ class IngredientInProductInline(nested_admin.NestedTabularInline):
 
 
 @admin.register(Product)
-class ProductAdmin(nested_admin.NestedModelAdmin):
+class ProductAdmin(ProductAdminDisplayMixin, nested_admin.NestedModelAdmin):
     list_display = (
         'name',
         'category',
@@ -216,19 +274,3 @@ class ProductAdmin(nested_admin.NestedModelAdmin):
 
     class Media:
         js = ('admin_extensions/js/pfc-ev-calculator.js',)
-
-    @admin.display(description='Ингредиенты')
-    def ingredients_list(self, obj):
-        return ', '.join(
-            [ingredient.name for ingredient in obj.ingredients.all()]
-        )
-
-    @admin.display(description='Превью')
-    def image_preview(self, obj):
-        first_image = obj.images.first()  # Берем первый related ProductImage
-        if first_image and first_image.image:
-            return format_html(
-                '<img src="{}" width="60" style="border-radius:4px;">',
-                first_image.image.url
-            )
-        return 'No image'
