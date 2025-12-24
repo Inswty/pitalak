@@ -1,15 +1,13 @@
-import logging
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
+from django.db import transaction
 from djoser.serializers import UserCreateSerializer
 from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
 
 from products.models import Category, Ingredient, Product, ProductImage
-from users.models import User
-
-logger = logging.getLogger(__name__)                                    # --- ??? ---
+from users.models import Address, User
 
 
 class BaseOTPSerializer(serializers.Serializer):
@@ -59,6 +57,42 @@ class CustomUserCreateSerializer(UserCreateSerializer):
     class Meta(UserCreateSerializer.Meta):
         model = User
         fields = ('phone',)
+
+
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = (
+            'id', 'locality', 'street', 'house', 'flat', 'floor', 'is_primary'
+        )
+
+
+class UserSerializer(serializers.ModelSerializer):
+    addresses = AddressSerializer(many=True, required=False)
+
+    class Meta:
+        model = User
+        fields = ('phone', 'name', 'last_name', 'email', 'addresses')
+
+    def validate_phone(self, value):
+        if self.instance and self.instance.phone != value:
+            raise serializers.ValidationError(
+                'Изменение номера телефона запрещено.'
+            )
+        return value
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        # Извлекаем данные адресов из пришедшего запроса
+        addresses_data = validated_data.pop('addresses', None)
+        # Обновляем основные поля пользователя
+        instance = super().update(instance, validated_data)
+        # Если адреса переданы, обновляем их
+        if addresses_data is not None:
+            instance.addresses.all().delete()
+            for address_data in addresses_data:
+                Address.objects.create(user=instance, **address_data)
+        return instance
 
 
 class ProductImageSerializer(serializers.ModelSerializer):

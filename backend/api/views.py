@@ -4,7 +4,7 @@ from django.conf import settings
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import Throttled, ValidationError
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -15,13 +15,14 @@ from .schemas import OTP_SEND_SCHEMA, OTP_VERIFY_SCHEMA
 from .serializers import (
     CategorySerializer, CategoryDetailSerializer, OTPRequestSerializer,
     OTPVerifySerializer, ProductListSerializer, ProductDetailSerializer,
+    UserSerializer,
 )
 
 logger = logging.getLogger(__name__)
 
 
 class OTPViewSet(viewsets.ViewSet):
-    """Эндпоинт для запроса на отправку/верификацию OTP."""
+    """Эндпоинт для запроса/верификации OTP."""
 
     permission_classes = (AllowAny,)
 
@@ -91,15 +92,44 @@ class OTPViewSet(viewsets.ViewSet):
         }
 
 
+class UserViewSet(viewsets.GenericViewSet):
+    """ViewSet для работы с профилем текущего пользователя."""
+
+    queryset = User.objects.prefetch_related('addresses').all()
+    serializer_class = UserSerializer
+    permission_classes = (IsAuthenticated,)
+    pagination_class = None
+    http_method_names = ['get', 'patch', 'head', 'options']
+
+    @action(detail=False, methods=['get', 'patch'], url_path='me')
+    def me(self, request):
+        """
+        Эндпоинт /api/users/me/
+        Позволяет получить или отредактировать профиль текущего юзера.
+        """
+        user = request.user
+        if request.method == 'GET':
+            serializer = self.get_serializer(user)
+            return Response(serializer.data)
+
+        elif request.method == 'PATCH':
+            # Частичное обновление профиля
+            serializer = self.get_serializer(user, data=request.data,
+                                             partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+
+
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only эндпойнт для Product API (list & retrieve)."""
 
-    permission_classes = (AllowAny,)
     queryset = (
         Product.objects
         .select_related('category')
         .prefetch_related('images')
     )
+    permission_classes = (AllowAny,)
 
     def get_serializer_class(self):
         if self.action == 'retrieve':

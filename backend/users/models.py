@@ -80,8 +80,8 @@ class Address(models.Model):
     is_primary = models.BooleanField("Основной", default=False)
 
     def save(self, *args, **kwargs):
-        # Если новый адрес или ещё нет адресов — этот будет основным
-        if not self.pk or not Address.objects.filter(user=self.user).exists():
+        # Если ещё нет адресов — этот будет основным
+        if not Address.objects.filter(user=self.user).exists():
             self.is_primary = True
         # Если этот адрес отмечается как основной — сбрасываем у остальных
         if self.is_primary:
@@ -104,10 +104,10 @@ class Address(models.Model):
     class Meta:
         verbose_name = 'Адрес'
         verbose_name_plural = 'Адреса'
-        ordering = ('-added',)
+        ordering = ('id',)
 
     def __str__(self):
-        """Отображение адреса в админке (в т.ч. для начальных autocomplete)."""
+        """Отображение адреса в админке."""
         display_text = self.format_address_display()
         # Добавим ⭐, если адрес основной
         if self.is_primary:
