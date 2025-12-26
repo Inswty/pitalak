@@ -7,6 +7,9 @@ from rest_framework.exceptions import Throttled, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import (
+    InvalidToken, TokenError, TokenRefreshView
+)
 
 from products.models import Category, Product
 from users.otp_manager import OTPManager
@@ -98,6 +101,44 @@ class OTPViewSet(viewsets.ViewSet):
             'access': str(refresh.access_token),
             'refresh': str(refresh)
         }
+
+
+class LoggedTokenRefreshView(TokenRefreshView):
+    """Логирование обновления Refresh-токена"""
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        raw_refresh = request.data.get('refresh')
+
+        if response.status_code == 200:
+            try:
+                token = RefreshToken(raw_refresh)
+                user_id = token.get('user_id')
+                logger.info(
+                    'JWT Refresh: успешное обновление токена для пользователя '
+                    'с user_id: %s',
+                    user_id
+                )
+            except (InvalidToken, TokenError):
+                # Ошибка уже есть в response
+                user_id = "unknown"
+            except Exception as e:
+                # Если случилось непонятное
+                logger.debug(
+                    'Ошибка при попытке парсинга токена для логов: %s', e
+                )
+        else:
+            logger.warning(
+                'JWT Refresh: Попытка обновления с невалидным токеном. IP: %s',
+                self.get_client_ip(request)
+            )
+        return response
+
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            return x_forwarded_for.split(',')[0]
+        return request.META.get('REMOTE_ADDR')
 
 
 @user_me_schemas
