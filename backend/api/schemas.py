@@ -2,6 +2,7 @@ from drf_spectacular.utils import (
     extend_schema, extend_schema_view, inline_serializer
 )
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
 from .serializers import (
     OTPRequestSerializer, OTPVerifySerializer, UserSerializer
@@ -12,6 +13,7 @@ otp_view_set_schemas = extend_schema_view(
     send=extend_schema(
         operation_id='request_otp',
         summary='Запрос OTP',
+        tags=['Auth'],
         description=(
             'Принимает номер телефона и отправляет SMS с кодом подтверждения.'
         ),
@@ -32,6 +34,7 @@ otp_view_set_schemas = extend_schema_view(
     verify=extend_schema(
         operation_id='verify_otp',
         summary='Верификация OTP',
+        tags=['Auth'],
         description='Проверяет код и возвращает JWT-токены для авторизации.',
         request=OTPVerifySerializer,
         responses={
@@ -55,6 +58,7 @@ user_me_schemas = extend_schema_view(
             methods=['GET'],
             operation_id='get_my_profile',
             summary='Получить профиль /me/',
+            tags=['Profile'],
             responses={200: UserSerializer}
         ),
         # Настройка для PATCH
@@ -62,6 +66,7 @@ user_me_schemas = extend_schema_view(
             methods=['PATCH'],
             operation_id='update_my_profile',
             summary='Изменить профиль /me/',
+            tags=['Profile'],
             responses={200: UserSerializer}
         ),
     ]
@@ -71,11 +76,13 @@ category_view_schema = extend_schema_view(
     list=extend_schema(
         operation_id='list_categories',
         summary='Список категорий',
+        tags=['Catalog'],
         description='Возвращает список всех активных категорий.',
     ),
     retrieve=extend_schema(
         operation_id='get_category_details',
         summary='Детали категории',
+        tags=['Catalog'],
         description='Возвращает полную информацию о конкретной категории.',
     ),
 )
@@ -84,6 +91,7 @@ product_view_schema = extend_schema_view(
     list=extend_schema(
         operation_id='list_products',
         summary='Список товаров',
+        tags=['Catalog'],
         description=(
             'Получение полного списка товаров с фильтрацией по категориям.'
         )
@@ -91,6 +99,29 @@ product_view_schema = extend_schema_view(
     retrieve=extend_schema(
         operation_id='get_product_details',
         summary='Детали товара',
+        tags=['Catalog'],
         description='Получение подробной информации о товаре по его ID.'
+    )
+)
+
+token_refresh_schema = extend_schema_view(
+    post=extend_schema(
+        summary='Обновление JWT токена',
+        tags=['Auth'],
+        description=(
+            'Принимает refresh-токен, возвращает новую пару access/refresh.'),
+        request=TokenRefreshSerializer,
+        responses={
+            200: TokenRefreshSerializer,
+            401: inline_serializer(
+                name='TokenRefreshError',
+                fields={
+                    'detail': serializers.CharField(
+                        default='Token is invalid or expired'
+                    ),
+                    'code': serializers.CharField(default='token_not_valid')
+                }
+            ),
+        },
     )
 )
