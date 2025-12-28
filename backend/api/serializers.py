@@ -72,12 +72,25 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('phone', 'name', 'last_name', 'email', 'addresses')
+        fields = ('id', 'phone', 'name', 'last_name', 'email', 'addresses')
 
     def validate_phone(self, value):
         if self.instance and self.instance.phone != value:
             raise serializers.ValidationError(
                 'Изменение номера телефона запрещено.'
+            )
+        return value
+
+    def validate_addresses(self, value):
+        if not value:
+            return value
+        primary_count = sum(
+            1 for address in value
+            if address.get('is_primary', False)
+        )
+        if primary_count > 1:
+            raise serializers.ValidationError(
+                'Только один адрес может быть основным.'
             )
         return value
 
