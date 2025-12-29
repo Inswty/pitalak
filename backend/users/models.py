@@ -7,6 +7,8 @@ from core.constants import MAX_STR_LENGTH
 
 
 class UserManager(BaseUserManager):
+    """Менеджер пользователей с номером телефона вместо username."""
+
     def create_user(self, phone, password=None, **extra_fields):
         if not phone:
             raise ValueError('Номер телефона должен быть добавлен')
@@ -62,6 +64,8 @@ class User(AbstractUser):
 
 
 class Address(models.Model):
+    """Адреса пользователей."""
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

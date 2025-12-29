@@ -1,7 +1,8 @@
 MAX_CHAR_LENGTH = 256
 MAX_INGREDIENT_LENGTH = 128
 MAX_PRICE_DIGITS = 10
-MAX_STR_LENGTH = 40
-MAX_UNIT_LENGTH = 16
-PRICE_DECIMAL_PLACES = 2    # Количество цифр после запятой
 MAX_SLUG_LENGTH = 50
+MAX_STR_LENGTH = 40
+MAX_TG_LOG_MESSAGE_LENGTH = 300  # Ограничение длины текста ошибки для Telegram
+MAX_UNIT_LENGTH = 16
+PRICE_DECIMAL_PLACES = 2  # Количество цифр после запятой

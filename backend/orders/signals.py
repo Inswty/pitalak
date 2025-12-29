@@ -11,6 +11,10 @@ logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=Order)
 def order_created(sender, instance, created, **kwargs):
+    """
+    Обрабатывает событие создания заказа
+    и отправляет уведомление в Telegram.
+    """
     logger.info('Создан заказ, запуск отправки сообщения в телеграм')
     if created:
         send_order_created_message.delay(

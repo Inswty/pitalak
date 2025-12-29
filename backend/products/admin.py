@@ -131,6 +131,8 @@ class IngredientAdmin(admin.ModelAdmin):
 
 class ProductInCategoryInline(ProductAdminDisplayMixin, admin.TabularInline):
     model = Product
+    extra = 0
+    show_change_link = True
     fields = (
         'name',
         'is_available',
@@ -147,8 +149,6 @@ class ProductInCategoryInline(ProductAdminDisplayMixin, admin.TabularInline):
         'ingredients_list',
         'weight',
     )
-    extra = 0
-    show_change_link = True
 
     # Скрывает кнопку 'Добавить еще один'
     def has_add_permission(self, request, obj=None):
@@ -229,7 +229,7 @@ class ProductIngredientInlineFormSet(BaseInlineFormSet):
             if form.cleaned_data and not form.cleaned_data.get(
                 'DELETE', False
             ):
-                total += form.cleaned_data.get('amount_per_100g', 0)
+                total += form.cleaned_data.get('amount_per_100g', Decimal('0'))
         if total > 100:
             raise ValidationError(
                 'Сумма ингредиентов не может быть больше 100 г '

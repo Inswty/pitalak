@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 class Category(models.Model):
+    """Категория товаров для группировки продуктов в каталоге."""
+
     name = models.CharField(
         'Название', unique=True, max_length=MAX_CHAR_LENGTH
     )

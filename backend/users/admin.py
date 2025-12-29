@@ -63,7 +63,7 @@ class UserAdmin(BaseUserAdmin):
         'phone_verified',
     )
     inlines = (AddressInline,)
-    list_display_links = ('phone', 'name')  # кликабельные поля
+    list_display_links = ('phone', 'name')  # Кликабельные поля
     search_fields = ('phone', 'email', 'name')
     readonly_fields = ('orders_link', 'total_cost_orders')
     list_filter = ('is_superuser', 'is_active', 'phone_verified')

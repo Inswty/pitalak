@@ -29,7 +29,7 @@ class ShoppingCart(models.Model):
         'users.Address',
         on_delete=models.SET_NULL,
         null=True, blank=True,
-        related_name='cart_adress',
+        related_name='cart_address',
         verbose_name='Адрес доставки'
     )
 
@@ -75,7 +75,9 @@ class CartItem(models.Model):
 
 
 class OrderCounters(models.Model):
-    last_reset_year = models.PositiveBigIntegerField()
+    """Хранит счётчики заказов по годам с датой последнего сброса."""
+
+    last_reset_year = models.PositiveSmallIntegerField()
     orders_in_year = models.PositiveIntegerField()
 
 
@@ -216,7 +218,11 @@ class OrderItem(models.Model):
         related_name='order_items',
         verbose_name='Продукт'
     )
-    quantity = models.PositiveIntegerField('Количество', default=1)
+    quantity = models.PositiveIntegerField(
+        'Количество',
+        default=1,
+        validators=[MinValueValidator(1)]
+    )
     price = models.DecimalField(
         'Цена',
         max_digits=MAX_PRICE_DIGITS,

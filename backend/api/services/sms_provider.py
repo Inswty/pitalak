@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 class TargetSMSClient:
+    """Класс взаимодействия с API сервиса TargetSMS."""
+
     def __init__(self):
         self.login = settings.SMS_PROVIDER_LOGIN
         self.password = settings.SMS_PROVIDER_PASSWORD

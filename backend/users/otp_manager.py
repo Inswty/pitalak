@@ -6,8 +6,8 @@ from contextlib import contextmanager
 
 from django.conf import settings
 from django_redis import get_redis_connection
-from rest_framework.exceptions import Throttled
 from redis.exceptions import ConnectionError, RedisError
+from rest_framework.exceptions import Throttled
 
 from users.tasks import send_otp_sms_task
 

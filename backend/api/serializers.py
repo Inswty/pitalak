@@ -3,8 +3,8 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.conf import settings
 from django.db import transaction
 from djoser.serializers import UserCreateSerializer
-from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
+from rest_framework import serializers
 
 from products.models import Category, Ingredient, Product, ProductImage
 from users.models import Address, User
@@ -51,8 +51,8 @@ class OTPVerifySerializer(BaseOTPSerializer):
 
 class CustomUserCreateSerializer(UserCreateSerializer):
     """
-    Переопределяет стандартный UserCreateSerializer, ограничивает
-    поля только полем 'phone'.
+    Переопределяет стандартный UserCreateSerializer.
+    Ограничивает поля только полем 'phone'.
     """
     class Meta(UserCreateSerializer.Meta):
         model = User
@@ -60,6 +60,8 @@ class CustomUserCreateSerializer(UserCreateSerializer):
 
 
 class AddressSerializer(serializers.ModelSerializer):
+    """Сериализатор адреса пользователя."""
+
     class Meta:
         model = Address
         fields = (
@@ -68,6 +70,8 @@ class AddressSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    """Сериализатор пользователя с привязанными адресами."""
+
     addresses = AddressSerializer(many=True, required=False)
 
     class Meta:
@@ -109,6 +113,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
+    """Сериализатор изображения продукта."""
 
     class Meta:
         model = ProductImage
@@ -116,6 +121,8 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 
 class IngredientInProductSerializer(serializers.ModelSerializer):
+    """Сериализатор ингредиента с нутриентами на 100 г продукта."""
+
     amount_per_100g = serializers.DecimalField(max_digits=6, decimal_places=2,
                                                read_only=True)
 
@@ -128,6 +135,7 @@ class IngredientInProductSerializer(serializers.ModelSerializer):
 
 
 class BaseProductSerializer(serializers.ModelSerializer):
+    """Базовый сериализатор продукта."""
 
     category = serializers.StringRelatedField()
     images = ProductImageSerializer(many=True, read_only=True)
@@ -141,12 +149,14 @@ class BaseProductSerializer(serializers.ModelSerializer):
 
 
 class ProductListSerializer(BaseProductSerializer):
+    """Сериализатор продукта для списка."""
 
     class Meta(BaseProductSerializer.Meta):
         pass
 
 
 class ProductDetailSerializer(BaseProductSerializer):
+    """Детальный сериализатор продукта с ингредиентами и нутриентами."""
 
     ingredients = serializers.SerializerMethodField()
     nutrients = serializers.SerializerMethodField()
@@ -221,6 +231,7 @@ class ProductDetailSerializer(BaseProductSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    """Сериализатор категории."""
 
     class Meta:
         model = Category
@@ -228,6 +239,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class CategoryDetailSerializer(serializers.ModelSerializer):
+    """Детальный сериализатор категории."""
 
     class Meta:
         model = Category

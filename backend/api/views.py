@@ -146,11 +146,11 @@ class LoggedTokenRefreshView(TokenRefreshView):
 class UserViewSet(viewsets.GenericViewSet):
     """ViewSet для работы с профилем текущего пользователя."""
 
+    permission_classes = (IsAuthenticated,)
     queryset = User.objects.prefetch_related('addresses').all()
     serializer_class = UserSerializer
-    permission_classes = (IsAuthenticated,)
-    pagination_class = None
     http_method_names = ['get', 'patch', 'head', 'options']
+    pagination_class = None
 
     @action(detail=False, methods=['get', 'patch'], url_path='me')
     def me(self, request):
@@ -176,17 +176,12 @@ class UserViewSet(viewsets.GenericViewSet):
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only эндпойнт для Product API (list & retrieve)."""
 
+    permission_classes = (AllowAny,)
     queryset = (
         Product.objects
         .select_related('category')
         .prefetch_related('images')
     )
-    permission_classes = (AllowAny,)
-
-    def get_serializer_class(self):
-        if self.action == 'retrieve':
-            return ProductDetailSerializer
-        return ProductListSerializer
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -200,6 +195,11 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             )
         return qs.filter(is_available=True).order_by('id')
 
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return ProductDetailSerializer
+        return ProductListSerializer
+
 
 @category_view_schema
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -208,11 +208,6 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (AllowAny,)
     queryset = Category.objects.filter(is_available=True)
     lookup_field = 'slug'
-
-    def get_serializer_class(self):
-        if self.action == 'retrieve':
-            return CategoryDetailSerializer
-        return CategorySerializer
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -223,3 +218,8 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
                 'products__category'
             )
         return qs
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return CategoryDetailSerializer
+        return CategorySerializer

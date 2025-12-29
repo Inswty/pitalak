@@ -1,5 +1,6 @@
-from django.db import transaction
 import logging
+
+from django.db import transaction
 
 from .models import Product
 
@@ -7,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProductService:
+    """Сервис для пересчёта и обновления PFC продуктов."""
 
     UPDATE_FIELDS = ['proteins', 'fats', 'carbs', 'energy_value']
 
