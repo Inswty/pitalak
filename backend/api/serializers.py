@@ -3,6 +3,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.conf import settings
 from django.db import transaction
 from djoser.serializers import UserCreateSerializer
+from drf_spectacular.utils import extend_schema_field
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
 
@@ -176,6 +177,17 @@ class ProductDetailSerializer(BaseProductSerializer):
                 data.pop(field, None)
         return data
 
+    @extend_schema_field({  # OpenAPI-схема для поля SerializerMethodField
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "amount_per_100g": {"type": "number", "format": "decimal"},
+            },
+            "required": ["name", "amount_per_100g"]
+        }
+    })
     def get_ingredients(self, obj):
         """
         Возвращает ингредиенты продукта с указанием их количества.
@@ -190,6 +202,19 @@ class ProductDetailSerializer(BaseProductSerializer):
             })
         return result
 
+    @extend_schema_field({  # OpenAPI-схема для поля SerializerMethodField
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "amount_per_100g": {"type": "number", "format": "decimal"},
+                "measurement_unit": {"type": "string"},
+                "rda": {"type": "number", "nullable": True},
+            },
+            "required": ["name", "amount_per_100g", "measurement_unit"]
+        }
+    })
     def get_nutrients(self, obj):
         """
         Возвращает агрегированные нутриенты ингредиентов продукта.
