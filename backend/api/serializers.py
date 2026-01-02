@@ -7,6 +7,8 @@ from drf_spectacular.utils import extend_schema_field
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
 
+from core.constants import MAX_PRICE_DIGITS, PRICE_DECIMAL_PLACES
+from orders.models import CartItem, ShoppingCart
 from products.models import Category, Ingredient, Product, ProductImage
 from users.models import Address, User
 
@@ -271,7 +273,64 @@ class CategoryDetailSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'slug')
 
 
-class ShoppingCartSerializer(serializers.ModelSerializer):
-    """Сериализатор корзины покупок пользователя."""
+class CartItemSerializer(serializers.ModelSerializer):
+    """Сериализатор товаров в корзине пользователя."""
 
-    pass
+    id = serializers.IntegerField(read_only=True, default=0)
+    product_id = serializers.IntegerField(source='product.id', read_only=True)
+    name = serializers.CharField(source='product.name', read_only=True)
+    price = serializers.DecimalField(
+        source='product.price', max_digits=MAX_PRICE_DIGITS,
+        decimal_places=PRICE_DECIMAL_PLACES, read_only=True
+    )
+    summ = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CartItem
+        fields = ('id', 'product_id', 'name', 'price', 'quantity', 'summ')
+
+    def get_summ(self, obj):
+        return obj.product.price * obj.quantity
+
+
+class ShoppingCartReadSerializer(serializers.ModelSerializer):
+    """Сериализатор корзины покупок пользователя - чтение."""
+
+    items = CartItemSerializer(source='items.all', many=True, read_only=True)
+    total_price = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ShoppingCart
+        fields = ('items', 'total_price')
+
+    def get_total_price(self, obj):
+        return sum(
+            item.product.price * item.quantity for item in obj.items.all()
+        )
+
+
+class CartItemWriteSerializer(serializers.Serializer):
+    """Сериализатор для записи позиции в корзину."""
+
+    product_id = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(),
+        source='product'
+    )
+    quantity = serializers.IntegerField(min_value=1)
+
+
+class ShoppingCartWriteSerializer(serializers.Serializer):
+    """Сериализатор корзины покупок пользователя - запись."""
+
+    items = CartItemWriteSerializer(many=True)
+
+    def update(self, instance, validated_data):
+        items_data = validated_data.get('items', [])
+        instance.items.all().delete()
+        CartItem.objects.bulk_create([
+            CartItem(cart=instance,
+                     product=item['product'],
+                     quantity=item['quantity'])
+            for item in items_data
+        ])
+        return instance
