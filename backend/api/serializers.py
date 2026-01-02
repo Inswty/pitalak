@@ -260,7 +260,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ('name', 'slug')
+        fields = ('id', 'name', 'slug')
 
 
 class CategoryDetailSerializer(serializers.ModelSerializer):
@@ -269,3 +269,9 @@ class CategoryDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ('id', 'name', 'slug')
+
+
+class ShoppingCartSerializer(serializers.ModelSerializer):
+    """Сериализатор корзины покупок пользователя."""
+
+    pass

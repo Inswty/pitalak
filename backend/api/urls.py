@@ -5,8 +5,8 @@ from drf_spectacular.views import (
 from rest_framework.routers import DefaultRouter
 
 from .views import (
-    CategoryViewSet, LoggedTokenRefreshView, OTPViewSet, ProductViewSet,
-    UserViewSet
+    CartViewSet, CategoryViewSet, LoggedTokenRefreshView, OTPViewSet,
+    ProductViewSet, UserViewSet
 )
 
 app_name = 'api'
@@ -16,6 +16,7 @@ v1_router.register(r'otp', OTPViewSet, basename='otp')
 v1_router.register(r'users', UserViewSet, basename='users')
 v1_router.register(r'products', ProductViewSet, basename='products')
 v1_router.register(r'categories', CategoryViewSet, basename='categories')
+v1_router.register(r'cart', CartViewSet, basename='cart')
 
 docs_urlpatterns = [
     path('schema/', SpectacularAPIView.as_view(), name='schema'),

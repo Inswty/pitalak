@@ -41,8 +41,9 @@ otp_view_set_schemas = extend_schema_view(
         responses={
             200: inline_serializer(
                 name='OTPTokenResponse',
-                fields={'refresh': serializers.CharField(),
-                        'access': serializers.CharField()}
+                fields={'access': serializers.CharField(),
+                        'refresh': serializers.CharField()
+                        }
             ),
             400: inline_serializer(
                 name='ValidationError',

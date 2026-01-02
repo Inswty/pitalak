@@ -1,7 +1,7 @@
 import logging
 
 from django.conf import settings
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import Throttled, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -11,6 +11,7 @@ from rest_framework_simplejwt.views import (
     InvalidToken, TokenError, TokenRefreshView
 )
 
+from orders.models import ShoppingCart
 from products.models import Category, Product
 from users.otp_manager import OTPManager
 from users.models import User
@@ -21,7 +22,7 @@ from .schemas import (
 from .serializers import (
     CategorySerializer, CategoryDetailSerializer, OTPRequestSerializer,
     OTPVerifySerializer, ProductListSerializer, ProductDetailSerializer,
-    UserSerializer,
+    ShoppingCartSerializer, UserSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -223,3 +224,46 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
         if self.action == 'retrieve':
             return CategoryDetailSerializer
         return CategorySerializer
+
+
+class CartViewSet(mixins.RetrieveModelMixin,
+                  mixins.UpdateModelMixin,
+                  mixins.DestroyModelMixin,
+                  viewsets.GenericViewSet):
+    """Корзина покупок пользователя."""
+
+    permission_classes = (IsAuthenticated,)
+    queryset = ShoppingCart.objects.all()
+    serializer_class = ShoppingCartSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        """Возвращаем корзину только для текущего пользователя."""
+        return ShoppingCart.objects.filter(user=self.request.user)
+
+    @action(detail=False, methods=['get', 'patch', 'delete'], url_path='me')
+    def me(self, request):
+        """Эндпоинт /cart/me/ для текущего пользователя"""
+        try:
+            cart = self.get_queryset().get()
+        except ShoppingCart.DoesNotExist:
+            return Response(
+                {"detail": "Корзина не найдена"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if request.method == 'GET':
+            serializer = self.get_serializer(cart)
+            return Response(serializer.data)
+
+        elif request.method == 'PATCH':
+            # Логика обновления корзины (добавление/удаление товаров)
+            serializer = self.get_serializer(cart, data=request.data,
+                                             partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+
+        elif request.method == 'DELETE':
+            cart.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
