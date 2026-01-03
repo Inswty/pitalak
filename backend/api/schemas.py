@@ -6,7 +6,8 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
 from .serializers import (
     OTPRequestSerializer, OTPVerifySerializer, ProductDetailSerializer,
-    ProductListSerializer, UserSerializer
+    ProductListSerializer, ShoppingCartReadSerializer,
+    ShoppingCartWriteSerializer, UserSerializer
 )
 
 
@@ -50,6 +51,28 @@ otp_view_set_schemas = extend_schema_view(
                 fields={'detail': serializers.CharField()}
             )
         }
+    )
+)
+
+token_refresh_schema = extend_schema_view(
+    post=extend_schema(
+        summary='Обновление JWT токена',
+        tags=['AUTH'],
+        description=(
+            'Принимает refresh-токен, возвращает новую пару access/refresh.'),
+        request=TokenRefreshSerializer,
+        responses={
+            200: TokenRefreshSerializer,
+            401: inline_serializer(
+                name='TokenRefreshError',
+                fields={
+                    'detail': serializers.CharField(
+                        default='Token is invalid or expired'
+                    ),
+                    'code': serializers.CharField(default='token_not_valid')
+                }
+            ),
+        },
     )
 )
 
@@ -108,24 +131,32 @@ product_view_schema = extend_schema_view(
     )
 )
 
-token_refresh_schema = extend_schema_view(
-    post=extend_schema(
-        summary='Обновление JWT токена',
-        tags=['AUTH'],
-        description=(
-            'Принимает refresh-токен, возвращает новую пару access/refresh.'),
-        request=TokenRefreshSerializer,
-        responses={
-            200: TokenRefreshSerializer,
-            401: inline_serializer(
-                name='TokenRefreshError',
-                fields={
-                    'detail': serializers.CharField(
-                        default='Token is invalid or expired'
-                    ),
-                    'code': serializers.CharField(default='token_not_valid')
-                }
-            ),
-        },
-    )
+cart_view_schema = extend_schema_view(
+    me=[
+        extend_schema(
+            methods=['GET'],
+            operation_id='get_cart',
+            summary='Получить корзину пользователя',
+            tags=['CART'],
+            description='Возвращает товары в корзине текущего пользователя.',
+            responses={200: ShoppingCartReadSerializer},
+        ),
+        extend_schema(
+            methods=['PATCH'],
+            operation_id='update_cart',
+            summary='Обновить корзину пользователя',
+            tags=['CART'],
+            description='Обновляет товары в корзине.',
+            request=ShoppingCartWriteSerializer,
+            responses={200: ShoppingCartReadSerializer},
+        ),
+        extend_schema(
+            methods=['DELETE'],
+            operation_id='clear_cart',
+            summary='Очистить корзину пользователя',
+            tags=['CART'],
+            description='Удаляет все товары из корзины текущего пользователя.',
+            responses={204: None},
+        ),
+    ]
 )

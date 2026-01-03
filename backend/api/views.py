@@ -16,7 +16,7 @@ from products.models import Category, Product
 from users.otp_manager import OTPManager
 from users.models import User
 from .schemas import (
-    category_view_schema, otp_view_set_schemas,
+    cart_view_schema, category_view_schema, otp_view_set_schemas,
     product_view_schema, token_refresh_schema, user_me_schemas
 )
 from .serializers import (
@@ -226,6 +226,7 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
         return CategorySerializer
 
 
+@cart_view_schema
 class CartViewSet(viewsets.GenericViewSet):
     """Корзина покупок пользователя."""
 
