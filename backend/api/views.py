@@ -1,3 +1,4 @@
+import json
 import logging
 
 from django.conf import settings
@@ -165,12 +166,36 @@ class UserViewSet(viewsets.GenericViewSet):
             return Response(serializer.data)
 
         elif request.method == 'PATCH':
-            # Частичное обновление профиля
-            serializer = self.get_serializer(user, data=request.data,
-                                             partial=True)
+            """Обновляет профиль пользователя и логирует изменённые поля."""
+            old_data = self.get_serializer(user).data
+
+            serializer = self.get_serializer(
+                user, data=request.data, partial=True
+            )
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data)
+            new_data = serializer.data
+            changes = {
+                field: {
+                    'from': old_data[field],
+                    'to': new_data.get(field),
+                }
+                for field in request.data
+                if field in old_data and old_data[field] != new_data.get(field)
+            }
+            if changes:
+                user_info = (
+                    f'ID: {user.id} | '
+                    f'Phone: {getattr(user, "phone", "N/A")} | '
+                    f'Name: {getattr(user, "name", "N/A")}'
+                )
+                log_message = json.dumps(
+                    changes, ensure_ascii=False, indent=2
+                )
+                logger.info(
+                    f'Профиль пользователя обновлён: ({user_info}):\n{log_message}'
+                )
+            return Response(new_data)
 
 
 @product_view_schema
