@@ -12,7 +12,7 @@ from rest_framework_simplejwt.views import (
     InvalidToken, TokenError, TokenRefreshView
 )
 
-from orders.models import ShoppingCart
+from orders.models import Order, ShoppingCart
 from products.models import Category, Product
 from users.otp_manager import OTPManager
 from users.models import User
@@ -21,9 +21,10 @@ from .schemas import (
     product_view_schema, token_refresh_schema, user_me_schemas
 )
 from .serializers import (
-    CategorySerializer, CategoryDetailSerializer, OTPRequestSerializer,
-    OTPVerifySerializer, ProductListSerializer, ProductDetailSerializer,
-    ShoppingCartReadSerializer, ShoppingCartWriteSerializer, UserSerializer,
+    CategorySerializer, CategoryDetailSerializer, OrderDetailSerializer,
+    OrderListSerializer, OTPRequestSerializer, OTPVerifySerializer,
+    ProductListSerializer, ProductDetailSerializer, ShoppingCartReadSerializer,
+    ShoppingCartWriteSerializer, UserSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -193,7 +194,8 @@ class UserViewSet(viewsets.GenericViewSet):
                     changes, ensure_ascii=False, indent=2
                 )
                 logger.info(
-                    f'Профиль пользователя обновлён: ({user_info}):\n{log_message}'
+                    f'Профиль пользователя обновлён: '
+                    f'({user_info}):\n{log_message}'
                 )
             return Response(new_data)
 
@@ -256,7 +258,6 @@ class CartViewSet(viewsets.GenericViewSet):
     """Корзина покупок пользователя."""
 
     permission_classes = (IsAuthenticated,)
-    queryset = ShoppingCart.objects.all()
     pagination_class = None
 
     def get_queryset(self):
@@ -291,3 +292,18 @@ class CartViewSet(viewsets.GenericViewSet):
         elif request.method == 'DELETE':
             cart.items.all().delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class OrderViewSet(viewsets.ReadOnlyModelViewSet):
+    """Эндпойнт заказов текущего пользователя."""
+
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        """Возвращаем заказы только текущего пользователя."""
+        return Order.objects.filter(user=self.request.user)
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return OrderDetailSerializer
+        return OrderListSerializer

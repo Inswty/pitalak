@@ -8,7 +8,7 @@ from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
 
 from core.constants import MAX_PRICE_DIGITS, PRICE_DECIMAL_PLACES
-from orders.models import CartItem, ShoppingCart
+from orders.models import CartItem, Order, OrderItem, ShoppingCart
 from products.models import Category, Ingredient, Product, ProductImage
 from users.models import Address, User
 
@@ -334,3 +334,40 @@ class ShoppingCartWriteSerializer(serializers.Serializer):
             for item in items_data
         ])
         return instance
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    """Сериализатор товаров в заказе пользователя."""
+
+    product_id = serializers.IntegerField(source='product.id', read_only=True)
+    name = serializers.CharField(source='product.name', read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = ('product_id', 'name', 'quantity', 'price',)
+
+
+class OrderListSerializer(serializers.ModelSerializer):
+    """Сериализатор заказов пользователя."""
+
+    class Meta:
+        model = Order
+        fields = (
+            'id', 'order_number', 'status', 'created_at', 'delivery',
+            'total_price',
+        )
+
+
+class OrderDetailSerializer(serializers.ModelSerializer):
+    """Сериализатор Detail-заказа пользователя."""
+
+    delivery_address = AddressSerializer(source='address', read_only=True)
+    items = OrderItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = (
+            'id', 'order_number', 'status', 'comment', 'created_at',
+            'delivery', 'delivery_address', 'total_price', 'payment_method',
+            'items',
+        )
