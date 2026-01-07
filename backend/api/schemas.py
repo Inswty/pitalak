@@ -11,6 +11,17 @@ from .serializers import (
 )
 
 
+UNAUTHORIZED_RESPONSE = {
+    401: inline_serializer(
+        name='UnauthorizedError',
+        fields={
+            'detail': serializers.CharField(
+                default='Учетные данные не были предоставлены.'
+            )
+        }
+    )
+}
+
 otp_view_set_schemas = extend_schema_view(
     send=extend_schema(
         operation_id='request_otp',
@@ -84,7 +95,7 @@ user_me_schemas = extend_schema_view(
             operation_id='get_my_profile',
             summary='Получить профиль /me/',
             tags=['USERS'],
-            responses={200: UserSerializer}
+            responses={200: UserSerializer, **UNAUTHORIZED_RESPONSE}
         ),
         # Настройка для PATCH
         extend_schema(
@@ -92,7 +103,7 @@ user_me_schemas = extend_schema_view(
             operation_id='update_my_profile',
             summary='Изменить профиль /me/',
             tags=['USERS'],
-            responses={200: UserSerializer}
+            responses={200: UserSerializer, **UNAUTHORIZED_RESPONSE}
         ),
     ]
 )
@@ -139,7 +150,10 @@ cart_view_schema = extend_schema_view(
             summary='Получить корзину пользователя',
             tags=['CART'],
             description='Возвращает товары в корзине текущего пользователя.',
-            responses={200: ShoppingCartReadSerializer},
+            responses={
+                200: ShoppingCartReadSerializer,
+                **UNAUTHORIZED_RESPONSE
+            },
         ),
         extend_schema(
             methods=['PATCH'],
@@ -148,7 +162,10 @@ cart_view_schema = extend_schema_view(
             tags=['CART'],
             description='Обновляет товары в корзине.',
             request=ShoppingCartWriteSerializer,
-            responses={200: ShoppingCartReadSerializer},
+            responses={
+                200: ShoppingCartReadSerializer,
+                **UNAUTHORIZED_RESPONSE
+            },
         ),
         extend_schema(
             methods=['DELETE'],
@@ -156,7 +173,7 @@ cart_view_schema = extend_schema_view(
             summary='Очистить корзину пользователя',
             tags=['CART'],
             description='Удаляет все товары из корзины текущего пользователя.',
-            responses={204: None},
+            responses={204: None, **UNAUTHORIZED_RESPONSE},
         ),
     ]
 )
@@ -168,7 +185,10 @@ order_view_schema = extend_schema_view(
         summary='Список заказов текущего пользователя',
         tags=['ORDER'],
         description='Возвращает список заказов текущего пользователя.',
-        responses={200: OrderListSerializer(many=True)},
+        responses={
+            200: OrderListSerializer(many=True),
+            **UNAUTHORIZED_RESPONSE
+        }
     ),
     retrieve=extend_schema(
         methods=['GET'],
@@ -179,6 +199,6 @@ order_view_schema = extend_schema_view(
             'Возвращает детальную информацию о конкретном заказе'
             'пользователя, включая товары и адрес доставки.'
         ),
-        responses={200: OrderDetailSerializer},
+        responses={200: OrderDetailSerializer, **UNAUTHORIZED_RESPONSE}
     ),
 )
