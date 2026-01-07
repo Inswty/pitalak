@@ -17,8 +17,9 @@ from products.models import Category, Product
 from users.otp_manager import OTPManager
 from users.models import User
 from .schemas import (
-    cart_view_schema, category_view_schema, otp_view_set_schemas,
-    product_view_schema, token_refresh_schema, user_me_schemas
+    cart_view_schema, category_view_schema, order_view_schema,
+    otp_view_set_schemas, product_view_schema, token_refresh_schema,
+    user_me_schemas
 )
 from .serializers import (
     CategorySerializer, CategoryDetailSerializer, OrderDetailSerializer,
@@ -234,7 +235,7 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only эндпойнт для Category API (list & retrieve)."""
 
     permission_classes = (AllowAny,)
-    queryset = Category.objects.filter(is_available=True)
+    queryset = Category.objects.filter(is_available=True).order_by('name')
     lookup_field = 'slug'
 
     def get_queryset(self):
@@ -294,6 +295,7 @@ class CartViewSet(viewsets.GenericViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@order_view_schema
 class OrderViewSet(viewsets.ReadOnlyModelViewSet):
     """Эндпойнт заказов текущего пользователя."""
 
@@ -301,7 +303,9 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """Возвращаем заказы только текущего пользователя."""
-        return Order.objects.filter(user=self.request.user)
+        return (
+            Order.objects.filter(user=self.request.user).order_by('created_at')
+        )
 
     def get_serializer_class(self):
         if self.action == 'retrieve':

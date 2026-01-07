@@ -5,9 +5,9 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
 from .serializers import (
-    OTPRequestSerializer, OTPVerifySerializer, ProductDetailSerializer,
-    ProductListSerializer, ShoppingCartReadSerializer,
-    ShoppingCartWriteSerializer, UserSerializer
+    OrderDetailSerializer, OrderListSerializer, OTPRequestSerializer,
+    OTPVerifySerializer, ProductDetailSerializer, ProductListSerializer,
+    ShoppingCartReadSerializer, ShoppingCartWriteSerializer, UserSerializer
 )
 
 
@@ -159,4 +159,26 @@ cart_view_schema = extend_schema_view(
             responses={204: None},
         ),
     ]
+)
+
+order_view_schema = extend_schema_view(
+    list=extend_schema(
+        methods=['GET'],
+        operation_id='list_orders',
+        summary='Список заказов текущего пользователя',
+        tags=['ORDER'],
+        description='Возвращает список заказов текущего пользователя.',
+        responses={200: OrderListSerializer(many=True)},
+    ),
+    retrieve=extend_schema(
+        methods=['GET'],
+        operation_id='retrieve_order',
+        summary='Получить детали заказа',
+        tags=['ORDER'],
+        description=(
+            'Возвращает детальную информацию о конкретном заказе'
+            'пользователя, включая товары и адрес доставки.'
+        ),
+        responses={200: OrderDetailSerializer},
+    ),
 )
