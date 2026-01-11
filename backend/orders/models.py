@@ -74,6 +74,26 @@ class CartItem(models.Model):
         return f'{self.product} × {self.quantity}'
 
 
+class Delivery(models.Model):
+    """Варианты доставки."""
+
+    name = models.CharField(max_length=100)
+    price = models.DecimalField(
+        'Стоимость (руб.)',
+        max_digits=MAX_PRICE_DIGITS,
+        decimal_places=PRICE_DECIMAL_PLACES,
+        default=Decimal('0.00')
+    )
+    description = models.TextField()
+
+    class Meta:
+        verbose_name = 'Варианты доставки'
+        verbose_name_plural = 'Варианты доставки'
+
+    def __str__(self):
+        return self.name
+
+
 class OrderCounters(models.Model):
     """Хранит счётчики заказов по годам с датой последнего сброса."""
 
@@ -139,11 +159,16 @@ class Order(models.Model):
         null=True,
         blank=True
     )
-    delivery = models.DateTimeField(
-        'Доставка',
-        null=True,
-        blank=True,
+    delivery = models.ForeignKey(
+        Delivery,
+        on_delete=models.PROTECT,
+        related_name='orders',
+        verbose_name='Способ доставки'
     )
+
+    delivery_date = models.DateField()
+    delivery_time_from = models.TimeField()
+    delivery_time_to = models.TimeField()
     payment_method = models.CharField(
         max_length=20,
         choices=PAYMENT_METHOD_CHOICES,
@@ -251,7 +276,12 @@ class DeliveryRule(models.Model):
     """
     Правило генерации слотов доставки в зависимости от времени создания заказа.
     """
-
+    delivery = models.ForeignKey(
+        Delivery,
+        on_delete=models.CASCADE,
+        related_name='rules',
+        verbose_name='Доставка'
+    )
     name = models.CharField('Название правила', max_length=255,)
     time_from = models.TimeField('Начало периода заказа')
     time_to = models.TimeField('Конец периода заказа')
@@ -268,18 +298,15 @@ class DeliveryRule(models.Model):
         return self.name
 
 
-class PayMethod(models.Model):
+class PaymentMethod(models.Model):
+    """Способы оплты."""
+
     name = models.CharField(max_length=100)
     description = models.TextField()
 
-    def __str__(self):
-        return self.name
-
-
-class Delivery(models.Model):
-    name = models.CharField(max_length=100)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    description = models.TextField()
+    class Meta:
+        verbose_name = 'Методы оплаты'
+        verbose_name_plural = 'Методы оплаты'
 
     def __str__(self):
         return self.name
