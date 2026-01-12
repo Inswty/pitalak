@@ -74,21 +74,54 @@ class CartItem(models.Model):
         return f'{self.product} × {self.quantity}'
 
 
+class PaymentMethod(models.Model):
+    """Способы оплаты."""
+
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Методы оплаты'
+        verbose_name_plural = 'Методы оплаты'
+
+    def __str__(self):
+        return self.name
+
+
+class Payment(models.Model):
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Ожидает оплаты'
+        PAID = 'paid', 'Оплачен'
+        FAILED = 'failed', 'Ошибка'
+        REFUNDED = 'refunded', 'Возврат'
+
+    order = models.OneToOneField(
+        'Order', on_delete=models.CASCADE, related_name='payment'
+    )
+    method = models.ForeignKey(PaymentMethod, on_delete=models.PROTECT)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
+    transaction_id = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
 class Delivery(models.Model):
     """Варианты доставки."""
 
-    name = models.CharField(max_length=100)
+    name = models.CharField('Название', max_length=100)
     price = models.DecimalField(
         'Стоимость (руб.)',
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES,
         default=Decimal('0.00')
     )
-    description = models.TextField()
+    description = models.TextField('Описание')
 
     class Meta:
         verbose_name = 'Варианты доставки'
-        verbose_name_plural = 'Варианты доставки'
+        verbose_name_plural = '_Варианты доставки'
 
     def __str__(self):
         return self.name
@@ -104,19 +137,12 @@ class OrderCounters(models.Model):
 class Order(models.Model):
     """Заказ, сформированный из корзины."""
 
-    STATUS_CHOICES = [
-        ('new', 'Новый'),
-        ('paid', 'Оплачен'),
-        ('shipped', 'Отправлен'),
-        ('done', 'Завершён'),
-        ('canceled', 'Отменён'),
-    ]
-    PAYMENT_METHOD_CHOICES = [
-        ('sbp', 'СБП'),
-        ('cash', 'Наличные курьеру'),
-        # ('card', 'Банковская карта'),
-        # ('yoomoney', 'ЮMoney'),
-    ]
+    class Status(models.TextChoices):
+        NEW = 'new', 'Новый'
+        PROCESSING = 'processing', 'В обработке'
+        SHIPPED = 'shipped', 'Отправлен'
+        DONE = 'done', 'Завершён'
+        CANCELED = 'canceled', 'Отменён'
 
     order_number = models.CharField(
         'Номер заказа', max_length=10, unique=True, editable=False
@@ -135,10 +161,9 @@ class Order(models.Model):
     )
     created_at = models.DateTimeField('Создан', auto_now_add=True)
     status = models.CharField(
-        'Статус',
         max_length=20,
-        choices=STATUS_CHOICES,
-        default='new'
+        choices=Status.choices,
+        default=Status.NEW
     )
     total_price = models.DecimalField(
         'Сумма (руб.)',
@@ -165,16 +190,9 @@ class Order(models.Model):
         related_name='orders',
         verbose_name='Способ доставки'
     )
-
-    delivery_date = models.DateField()
-    delivery_time_from = models.TimeField()
-    delivery_time_to = models.TimeField()
-    payment_method = models.CharField(
-        max_length=20,
-        choices=PAYMENT_METHOD_CHOICES,
-        default='sbp',
-        verbose_name='Способ оплаты',
-    )
+    delivery_date = models.DateField('Дата доставки')
+    delivery_time_from = models.TimeField('со времени')
+    delivery_time_to = models.TimeField('до врмени')
 
     def save(self, *args, **kwargs):
         if not self.order_number:
@@ -218,6 +236,12 @@ class Order(models.Model):
             )
             counter_obj.refresh_from_db()
             return f'{current_year:02d}{str(counter_obj.orders_in_year)}'
+
+    @property
+    def payment_status(self):
+        if hasattr(self, 'payment'):
+            return self.payment.status
+        return None
 
     class Meta:
         verbose_name = 'Заказ'
@@ -276,12 +300,7 @@ class DeliveryRule(models.Model):
     """
     Правило генерации слотов доставки в зависимости от времени создания заказа.
     """
-    delivery = models.ForeignKey(
-        Delivery,
-        on_delete=models.CASCADE,
-        related_name='rules',
-        verbose_name='Доставка'
-    )
+
     name = models.CharField('Название правила', max_length=255,)
     time_from = models.TimeField('Начало периода заказа')
     time_to = models.TimeField('Конец периода заказа')
@@ -292,21 +311,7 @@ class DeliveryRule(models.Model):
 
     class Meta:
         verbose_name = 'Политика доставки'
-        verbose_name_plural = 'Политика доставки'
-
-    def __str__(self):
-        return self.name
-
-
-class PaymentMethod(models.Model):
-    """Способы оплты."""
-
-    name = models.CharField(max_length=100)
-    description = models.TextField()
-
-    class Meta:
-        verbose_name = 'Методы оплаты'
-        verbose_name_plural = 'Методы оплаты'
+        verbose_name_plural = '_Политика доставки'
 
     def __str__(self):
         return self.name
