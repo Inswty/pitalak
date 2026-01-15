@@ -1,4 +1,5 @@
 from django import forms
+from django.db import models
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.forms.models import BaseInlineFormSet
@@ -10,7 +11,8 @@ from django.utils.safestring import mark_safe
 
 from users.models import Address
 from .models import (
-    CartItem, DeliveryRule, Order, OrderItem, Product, ShoppingCart
+    CartItem, Delivery, DeliveryRule, Order, OrderItem, Payment, PaymentMethod,
+    Product, ShoppingCart
 )
 from .services import OrderService
 
@@ -142,7 +144,7 @@ class CartItemInline(admin.TabularInline):
 @admin.register(ShoppingCart)
 class ShoppingCartAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
     list_display = ('user', 'item_list',)
-    search_fields = ('user', 'user__email')
+    search_fields = ('user', 'user__email',)
     fields = ('user', 'address', 'total_sum_display',)
     readonly_fields = ('total_sum_display',)
     autocomplete_fields = ('user',)
@@ -253,12 +255,13 @@ class OrderAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
         'status',
         'created_at',
         'total_price',
+        'get_payment_status',
     )
-    list_display_links = ('order_number', 'user')  # Кликабельные поля
+    list_display_links = ('order_number', 'user',)  # Кликабельные поля
     list_filter = ('status',)
     list_editable = ('status',)
     search_fields = (
-        'order_number', 'user__email', 'user__name', 'user__phone'
+        'order_number', 'user__email', 'user__name', 'user__phone',
     )
     fieldsets = (
         (None, {
@@ -267,16 +270,39 @@ class OrderAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
                 'created_at',
                 'status',
                 'address',
-                'delivery',
-                'payment_method',
                 'total_price',
+                'get_payment_status',
                 'comment',
             )
         }),
+        ('Параметры доставки', {
+            'fields': (
+                'delivery',
+                'delivery_date',
+                'delivery_time_from',
+                'delivery_time_to',
+            )
+        }),
     )
-    readonly_fields = ('order_number', 'total_price', 'created_at',)
+    readonly_fields = (
+        'order_number', 'total_price', 'get_payment_status', 'created_at',
+    )
     autocomplete_fields = ('user',)
     inlines = (ProductInOrderInline,)
+    formfield_overrides = {
+        models.TimeField: {
+            'widget': forms.TimeInput(
+                attrs={'type': 'time'},
+                format='%H:%M'
+            ),
+        },
+    }
+
+    def get_payment_status(self, obj):
+        if hasattr(obj, 'payment') and obj.payment:
+            return obj.payment.status
+        return 'Не оплачен'  # Статус, если платежа нет
+    get_payment_status.short_description = 'Статус оплаты'
 
 
 class DeliveryRuleAdminForm(forms.ModelForm):
@@ -314,7 +340,7 @@ class DeliveryRuleAdmin(admin.ModelAdmin):
         'days_offset',
         'delivery_time_from',
         'delivery_time_to',
-        'is_active'
+        'is_active',
     )
     list_editable = ('is_active',)
     search_fields = ('name',)
@@ -331,3 +357,17 @@ class DeliveryRuleAdmin(admin.ModelAdmin):
             'fields': ('days_offset', 'delivery_time_from', 'delivery_time_to')
         }),
     )
+
+
+@admin.register(Delivery)
+class DeliveryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'price', 'description',)
+    search_fields = ('name',)
+    ordering = ('name',)
+
+
+@admin.register(PaymentMethod)
+class PaymentMethodAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description',)
+    search_fields = ('name',)
+    ordering = ('name',)
