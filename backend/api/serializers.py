@@ -8,7 +8,10 @@ from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
 
 from core.constants import MAX_PRICE_DIGITS, PRICE_DECIMAL_PLACES
-from orders.models import CartItem, Order, OrderItem, ShoppingCart
+from orders.models import (
+    CartItem, Delivery, Order, OrderItem, Payment,
+    PaymentMethod, ShoppingCart,
+)
 from products.models import Category, Ingredient, Product, ProductImage
 from users.models import Address, User
 
@@ -371,3 +374,12 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             'delivery', 'delivery_address', 'total_price', 'payment_method',
             'items',
         )
+
+
+class CheckoutSerializer(serializers.Serializer):
+    """Сериализатор для оформления заказа (checkout)."""
+
+    cart_id = serializers.IntegerField(read_only=True)
+    address = serializers.PrimaryKeyRelatedField(queryset=Address.objects.all())
+    delivery = serializers.PrimaryKeyRelatedField(queryset=Delivery.objects.all())
+    payment_method = serializers.PrimaryKeyRelatedField(queryset=PaymentMethod.objects.all())

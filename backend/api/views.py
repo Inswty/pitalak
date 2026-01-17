@@ -22,10 +22,10 @@ from .schemas import (
     user_me_schemas
 )
 from .serializers import (
-    CategorySerializer, CategoryDetailSerializer, OrderDetailSerializer,
-    OrderListSerializer, OTPRequestSerializer, OTPVerifySerializer,
-    ProductListSerializer, ProductDetailSerializer, ShoppingCartReadSerializer,
-    ShoppingCartWriteSerializer, UserSerializer
+    CategorySerializer, CategoryDetailSerializer, CheckoutSerializer,
+    OrderDetailSerializer, OrderListSerializer, OTPRequestSerializer,
+    OTPVerifySerializer, ProductListSerializer, ProductDetailSerializer,
+    ShoppingCartReadSerializer, ShoppingCartWriteSerializer, UserSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -311,3 +311,13 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
         if self.action == 'retrieve':
             return OrderDetailSerializer
         return OrderListSerializer
+
+
+class CheckoutViewSet(viewsets.ModelViewSet):
+    """Энтпойнт для оформления заказа (checkout)."""
+
+    permission_classes = (IsAuthenticated)
+    serializer_class = CheckoutSerializer
+
+    def get_queryset(self):
+        return ShoppingCart.objects.filter(user=self.request.user)
