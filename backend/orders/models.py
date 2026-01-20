@@ -79,6 +79,7 @@ class PaymentMethod(models.Model):
 
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField('Активно', default=True)
 
     class Meta:
         verbose_name = 'Методы оплаты'
@@ -89,6 +90,8 @@ class PaymentMethod(models.Model):
 
 
 class Payment(models.Model):
+    """Оплата заказа."""
+
     class Status(models.TextChoices):
         PENDING = 'pending', 'Ожидает оплаты'
         PAID = 'paid', 'Оплачен'
@@ -118,6 +121,7 @@ class Delivery(models.Model):
         default=Decimal('0.00')
     )
     description = models.TextField('Описание')
+    is_active = models.BooleanField('Активно', default=True)
 
     class Meta:
         verbose_name = 'Варианты доставки'
@@ -307,7 +311,7 @@ class DeliveryRule(models.Model):
     days_offset = models.PositiveIntegerField('Сдвиг по дням')
     delivery_time_from = models.TimeField('Время начала доставки')
     delivery_time_to = models.TimeField('Время окончания доставки')
-    is_active = models.BooleanField(default=True, verbose_name='Активно')
+    is_active = models.BooleanField('Активно', default=True)
 
     class Meta:
         verbose_name = 'Политика доставки'

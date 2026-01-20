@@ -1,3 +1,4 @@
+from decimal import Decimal
 import json
 import logging
 
@@ -12,7 +13,7 @@ from rest_framework_simplejwt.views import (
     InvalidToken, TokenError, TokenRefreshView
 )
 
-from orders.models import Order, ShoppingCart
+from orders.models import Delivery, Order, PaymentMethod, ShoppingCart
 from products.models import Category, Product
 from users.otp_manager import OTPManager
 from users.models import User
@@ -22,10 +23,11 @@ from .schemas import (
     user_me_schemas
 )
 from .serializers import (
-    CategorySerializer, CategoryDetailSerializer, CheckoutSerializer,
-    OrderDetailSerializer, OrderListSerializer, OTPRequestSerializer,
-    OTPVerifySerializer, ProductListSerializer, ProductDetailSerializer,
-    ShoppingCartReadSerializer, ShoppingCartWriteSerializer, UserSerializer
+    CategorySerializer, CategoryDetailSerializer, CheckoutReadSerializer,
+    CheckoutWriteSerializer, OrderDetailSerializer, OrderListSerializer,
+    OTPRequestSerializer, OTPVerifySerializer, ProductListSerializer,
+    ProductDetailSerializer, ShoppingCartReadSerializer,
+    ShoppingCartWriteSerializer, UserSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -313,11 +315,46 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
         return OrderListSerializer
 
 
-class CheckoutViewSet(viewsets.ModelViewSet):
+class CheckoutViewSet(viewsets.GenericViewSet):
     """Энтпойнт для оформления заказа (checkout)."""
 
-    permission_classes = (IsAuthenticated)
-    serializer_class = CheckoutSerializer
+    permission_classes = (IsAuthenticated,)
+    pagination_class = None
 
-    def get_queryset(self):
-        return ShoppingCart.objects.filter(user=self.request.user)
+    def get_serializer_class(self):
+        return (
+            CheckoutWriteSerializer
+            if self.action == 'create'
+            else CheckoutReadSerializer
+        )
+
+    def get_cart(self):
+        cart, _ = ShoppingCart.objects.prefetch_related(
+            'items__product'
+        ).get_or_create(user=self.request.user)
+
+        return cart
+
+    def list(self, request, *args, **kwargs):
+        """Получение данных для checkout."""
+        cart = self.get_cart()
+
+        subtotal = sum(
+            item.product.price * item.quantity
+            for item in cart.items.all()
+        )
+
+        deliveries = Delivery.objects.filter(is_active=True)
+        payment_methods = PaymentMethod.objects.filter(is_active=True)
+
+        serializer = self.get_serializer({
+            'addresses': request.user.addresses.all(),
+            'items': cart.items.all(),
+            'deliveries': deliveries,
+            'payment_methods': payment_methods,
+            'subtotal': subtotal,
+            'delivery_price': Decimal('0.00'),
+            'total': subtotal,
+        })
+
+        return Response(serializer.data)

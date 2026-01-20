@@ -323,20 +323,38 @@ class CartItemWriteSerializer(serializers.Serializer):
 
 
 class ShoppingCartWriteSerializer(serializers.Serializer):
-    """Сериализатор корзины покупок пользователя - запись."""
 
     items = CartItemWriteSerializer(many=True)
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         items_data = validated_data.get('items', [])
         instance.items.all().delete()
         CartItem.objects.bulk_create([
-            CartItem(cart=instance,
-                     product=item['product'],
-                     quantity=item['quantity'])
+            CartItem(
+                cart=instance,
+                product=item['product'],
+                quantity=item['quantity']
+            )
             for item in items_data
         ])
         return instance
+
+
+class DeliverySerializer(serializers.ModelSerializer):
+    """Сериализатор для доставки."""
+
+    class Meta:
+        model = Delivery
+        fields = ('id', 'name', 'price', 'description')
+
+
+class PaymentMethodSerializer(serializers.ModelSerializer):
+    """Сериализатор для метода оплаты."""
+
+    class Meta:
+        model = PaymentMethod
+        fields = ('id', 'name')
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -365,6 +383,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     """Сериализатор Detail-заказа пользователя."""
 
     delivery_address = AddressSerializer(source='address', read_only=True)
+    payment_method = PaymentMethodSerializer(read_only=True)
     items = OrderItemSerializer(many=True, read_only=True)
 
     class Meta:
@@ -376,10 +395,30 @@ class OrderDetailSerializer(serializers.ModelSerializer):
         )
 
 
-class CheckoutSerializer(serializers.Serializer):
-    """Сериализатор для оформления заказа (checkout)."""
+class CheckoutReadSerializer(serializers.Serializer):
+    """Сериализатор для оформления заказа (checkout), чтение."""
 
-    cart_id = serializers.IntegerField(read_only=True)
-    address = serializers.PrimaryKeyRelatedField(queryset=Address.objects.all())
-    delivery = serializers.PrimaryKeyRelatedField(queryset=Delivery.objects.all())
-    payment_method = serializers.PrimaryKeyRelatedField(queryset=PaymentMethod.objects.all())
+    addresses = AddressSerializer(many=True)
+    items = CartItemSerializer(many=True)
+
+    deliveries = DeliverySerializer(many=True)
+    payment_methods = PaymentMethodSerializer(many=True)
+
+    subtotal = serializers.DecimalField(
+        max_digits=MAX_PRICE_DIGITS,
+        decimal_places=PRICE_DECIMAL_PLACES
+    )
+    delivery_price = serializers.DecimalField(
+        max_digits=MAX_PRICE_DIGITS,
+        decimal_places=PRICE_DECIMAL_PLACES
+    )
+    total = serializers.DecimalField(
+        max_digits=MAX_PRICE_DIGITS,
+        decimal_places=PRICE_DECIMAL_PLACES
+    )
+
+
+class CheckoutWriteSerializer(serializers.Serializer):
+    """Сериализатор для создания заказа (checkout), запись."""
+
+    pass
