@@ -22,44 +22,15 @@ class OrderCartDynamicAdminMixin:
     Миксин для Order/Cart Admin.
 
     Добавляет:
-    1. Динамическую фильтрацию поля 'address' по пользователю.
-    2. API-эндпоинты для подгрузки адресов и цен продуктов.
-    3. Подключение JS-скриптов для динамической логики формы.
+    1. API-эндпоинт для подгрузки цен продуктов.
+    2. Подключение JS-скриптов для динамической логики формы.
     """
-
-    def get_form(self, request, obj=None, **kwargs):
-        """
-        Настраивает форму заказа в админке.
-
-        Queryset поля 'address' ограничивается адресами выбранного пользователя
-        (или пустой, если пользователь ещё не выбран).
-        JS динамически подгружает адреса при выборе пользователя.
-        """
-        form = super().get_form(request, obj, **kwargs)
-        # Определяем user_id
-        user_id = None
-        if request.method == 'POST':
-            user_id = request.POST.get('user') or getattr(obj, 'user_id', None)
-        elif obj:
-            user_id = obj.user_id
-        # Формируем queryset адресов
-        if user_id:
-            form.base_fields['address'].queryset = Address.objects.filter(
-                user_id=user_id
-            )
-        else:
-            form.base_fields['address'].queryset = Address.objects.none()
-        # Отключаем кнопки add/change/delete/view
-        for attr in ['can_add_related', 'can_change_related',
-                     'can_delete_related', 'can_view_related']:
-            setattr(form.base_fields['address'].widget, attr, False)
-        return form
 
     def get_urls(self):
         """
         Расширяем маршруты админки.
 
-        Добавляем API для подгрузки адресов пользователя и цен продуктов.
+        Добавляем API для подгрузки цен продуктов.
         """
         urls = super().get_urls()
         custom_urls = [
@@ -68,30 +39,8 @@ class OrderCartDynamicAdminMixin:
                 self.admin_site.admin_view(self.get_product_price),
                 name='admin_get_product_price',
             ),
-            path(
-                'api/addresses/',
-                self.admin_site.admin_view(self.get_addresses_for_user),
-                name='admin_addresses_for_user',
-            ),
         ]
         return custom_urls + urls
-
-    def get_addresses_for_user(self, request):
-        """Возвращает список адресов, принадлежащих выбранному пользователю."""
-        user_id = request.GET.get('user_id')
-        if not user_id:
-            return JsonResponse([], safe=False)
-
-        addresses = Address.objects.filter(user_id=user_id)
-        data = [
-            {
-                'id': a.id,
-                'is_primary': a.is_primary,
-                'text': a.format_address_display()
-            }
-            for a in addresses
-        ]
-        return JsonResponse(data, safe=False)
 
     def get_product_price(self, request, pk):
         """Возвращает цену выбранного товара для автозаполнения в инлайне."""
@@ -99,11 +48,7 @@ class OrderCartDynamicAdminMixin:
         return JsonResponse({'price': product.price if product else None})
 
     class Media:
-        js = (
-            'admin_extensions/js/address-filter.js',
-            'admin_extensions/js/'
-            'update-total-price.js',
-        )
+        js = ('admin_extensions/js/update-total-price.js',)
 
 
 class CartItemInline(admin.TabularInline):
@@ -145,7 +90,7 @@ class CartItemInline(admin.TabularInline):
 class ShoppingCartAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
     list_display = ('user', 'item_list',)
     search_fields = ('user', 'user__email',)
-    fields = ('user', 'address', 'total_sum_display',)
+    fields = ('user', 'total_sum_display',)
     readonly_fields = ('total_sum_display',)
     autocomplete_fields = ('user',)
     actions = ('create_order_from_cart',)
@@ -182,15 +127,6 @@ class ShoppingCartAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
             )
             return
         cart = queryset.first()
-        # Проверяем, что в корзине выбран адрес
-        if not cart.address:
-            self.message_user(
-                request,
-                'Невозможно создать заказ: в корзине не выбран адрес. '
-                'Выберите адрес в корзине перед оформлением.',
-                level=messages.ERROR
-            )
-            return
         try:
             # Передаём cart
             order = OrderService.create_from_cart(cart)
@@ -269,7 +205,6 @@ class OrderAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
                 'user',
                 'created_at',
                 'status',
-                'address',
                 'total_price',
                 'get_payment_status',
                 'comment',
@@ -278,6 +213,7 @@ class OrderAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
         ('Параметры доставки', {
             'fields': (
                 'delivery',
+                'address',
                 'delivery_date',
                 'delivery_time_from',
                 'delivery_time_to',
@@ -298,11 +234,76 @@ class OrderAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
         },
     }
 
+    def get_form(self, request, obj=None, **kwargs):
+        """
+        Настраивает форму заказа в админке.
+
+        Queryset поля 'address' ограничивается адресами выбранного пользователя
+        (или пустой, если пользователь ещё не выбран).
+        JS динамически подгружает адреса при выборе пользователя.
+        """
+        form = super().get_form(request, obj, **kwargs)
+        # Определяем user_id
+        user_id = None
+        if request.method == 'POST':
+            user_id = request.POST.get('user') or getattr(obj, 'user_id', None)
+        elif obj:
+            user_id = obj.user_id
+        # Формируем queryset адресов
+        if user_id:
+            form.base_fields['address'].queryset = Address.objects.filter(
+                user_id=user_id
+            )
+        else:
+            form.base_fields['address'].queryset = Address.objects.none()
+        # Отключаем кнопки add/change/delete/view
+        for attr in ['can_add_related', 'can_change_related',
+                     'can_delete_related', 'can_view_related']:
+            setattr(form.base_fields['address'].widget, attr, False)
+        return form
+
+    def get_urls(self):
+        """
+        Расширяем маршруты админки.
+
+        Добавляем API для подгрузки адресов пользователя.
+        """
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'api/addresses/',
+                self.admin_site.admin_view(self.get_addresses_for_user),
+                name='admin_addresses_for_user',
+            ),
+        ]
+        return custom_urls + urls
+
+    def get_addresses_for_user(self, request):
+        """Возвращает список адресов, принадлежащих выбранному пользователю."""
+        user_id = request.GET.get('user_id')
+        if not user_id:
+            return JsonResponse([], safe=False)
+
+        addresses = Address.objects.filter(user_id=user_id)
+        data = [
+            {
+                'id': a.id,
+                'is_primary': a.is_primary,
+                'text': a.format_address_display()
+            }
+            for a in addresses
+        ]
+        return JsonResponse(data, safe=False)
+
     def get_payment_status(self, obj):
         if hasattr(obj, 'payment') and obj.payment:
             return obj.payment.status
         return 'Не оплачен'  # Статус, если платежа нет
     get_payment_status.short_description = 'Статус оплаты'
+
+    class Media(OrderCartDynamicAdminMixin.Media):
+        js = (OrderCartDynamicAdminMixin.Media.js
+              + ('admin_extensions/js/address-filter.js',))
 
 
 class DeliveryRuleAdminForm(forms.ModelForm):

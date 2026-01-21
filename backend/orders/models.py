@@ -25,13 +25,6 @@ class ShoppingCart(models.Model):
         related_name='carts',
         verbose_name='Продукты'
     )
-    address = models.ForeignKey(
-        'users.Address',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='cart_address',
-        verbose_name='Адрес доставки'
-    )
 
     class Meta:
         verbose_name = 'Корзина'
@@ -194,9 +187,9 @@ class Order(models.Model):
         related_name='orders',
         verbose_name='Способ доставки'
     )
-    delivery_date = models.DateField('Дата доставки')
-    delivery_time_from = models.TimeField('со времени')
-    delivery_time_to = models.TimeField('до врмени')
+    delivery_date = models.DateField('Дата доставки', blank=True, null=True)
+    delivery_time_from = models.TimeField('со времени', blank=True, null=True)
+    delivery_time_to = models.TimeField('до врмени', blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if not self.order_number:
