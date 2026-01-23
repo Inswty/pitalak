@@ -56,12 +56,12 @@ class ProductService:
         update_data = {field: data[field] for field in fields}
         product.__class__.objects.filter(pk=product.pk).update(**update_data)
 
-        # синхронизируем объект в памяти
+        # Синхронизируем объект в памяти
         for field, value in update_data.items():
             setattr(product, field, value)
 
         logger.info('Пересчёт PFC для "%s" успешно завершён', product.name)
-        # логируем превышение БЖУ
+        # Логируем превышение БЖУ
         total = product.proteins + product.fats + product.carbs
         if total > 100:
             logger.warning(
@@ -88,7 +88,7 @@ class ProductService:
             )
             return
         updated_products = []
-        invalid_products = []  # добавим список для логирования проблемных
+        invalid_products = []  # Добавим список для логирования проблемных
         for product in products:
             # Пропускаем несохранённые и ручные режимы
             if ProductService._should_skip_recalc(
@@ -97,7 +97,7 @@ class ProductService:
                 continue
             # Пересчёт нутриентов
             data = product.recalc_nutrition()
-            # вычислим сумму БЖУ перед обновлением
+            # Вычислим сумму БЖУ перед обновлением
             total = (
                 data.get('proteins', 0)
                 + data.get('fats', 0)

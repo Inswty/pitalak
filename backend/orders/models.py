@@ -168,6 +168,12 @@ class Order(models.Model):
         decimal_places=PRICE_DECIMAL_PLACES,
         default=Decimal('0.00')
     )
+    delivery_price = models.DecimalField(
+        'Стоимость доставкаи (руб.)',
+        max_digits=MAX_PRICE_DIGITS,
+        decimal_places=PRICE_DECIMAL_PLACES,
+        default=Decimal('0.00')
+    )
     address = models.ForeignKey(
         'users.Address',
         on_delete=models.SET_NULL,
@@ -181,11 +187,18 @@ class Order(models.Model):
         null=True,
         blank=True
     )
+    payment_method = models.ForeignKey(
+        PaymentMethod,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        verbose_name='Способ оплаты'
+    )
     delivery = models.ForeignKey(
         Delivery,
         on_delete=models.PROTECT,
         related_name='orders',
-        verbose_name='Способ доставки'
+        null=True, blank=True,
+        verbose_name='Способ доставки',
     )
     delivery_date = models.DateField('Дата доставки', blank=True, null=True)
     delivery_time_from = models.TimeField('со времени', blank=True, null=True)
