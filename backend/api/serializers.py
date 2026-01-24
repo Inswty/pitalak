@@ -300,13 +300,13 @@ class ShoppingCartReadSerializer(serializers.ModelSerializer):
     """Сериализатор корзины покупок пользователя - чтение."""
 
     items = CartItemSerializer(source='items.all', many=True, read_only=True)
-    total_price = serializers.SerializerMethodField()
+    items_total = serializers.SerializerMethodField()
 
     class Meta:
         model = ShoppingCart
-        fields = ('items', 'total_price')
+        fields = ('items', 'items_total')
 
-    def get_total_price(self, obj):
+    def get_items_total(self, obj):
         return sum(
             item.product.price * item.quantity for item in obj.items.all()
         )
@@ -375,7 +375,7 @@ class OrderListSerializer(serializers.ModelSerializer):
         model = Order
         fields = (
             'id', 'order_number', 'status', 'created_at', 'delivery',
-            'total_price',
+            'items_total',
         )
 
 
@@ -390,7 +390,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
         model = Order
         fields = (
             'id', 'order_number', 'status', 'comment', 'created_at',
-            'delivery', 'delivery_address', 'total_price', 'payment_method',
+            'delivery', 'delivery_address', 'items_total', 'payment_method',
             'items',
         )
 
@@ -408,7 +408,7 @@ class CheckoutReadSerializer(serializers.Serializer):
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES
     )
-    delivery_price = serializers.DecimalField(
+    """delivery_price = serializers.DecimalField(
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES
     )
@@ -416,6 +416,7 @@ class CheckoutReadSerializer(serializers.Serializer):
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES
     )
+    """
 
 
 class CheckoutWriteSerializer(serializers.Serializer):

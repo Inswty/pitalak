@@ -11,7 +11,7 @@ from django.utils.safestring import mark_safe
 
 from users.models import Address
 from .models import (
-    CartItem, Delivery, DeliveryRule, Order, OrderItem, Payment, PaymentMethod,
+    CartItem, Delivery, DeliveryRule, Order, OrderItem, PaymentMethod,
     Product, ShoppingCart
 )
 from .services import OrderService
@@ -99,7 +99,7 @@ class ShoppingCartAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
     def total_sum_display(self, obj):
         """Отображает общую сумму корзины."""
         if obj is None or not obj.pk:
-            return format_html('<div id="id_total_price"'
+            return format_html('<div id="id_items_total"'
                                ' class="readonly">0,00</div>')
 
         total = sum(
@@ -107,7 +107,7 @@ class ShoppingCartAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
             for item in obj.items.all()
         )
         formatted = f'{total:,.2f}'.replace(',', ' ')
-        return format_html('<div id="id_total_price"'
+        return format_html('<div id="id_items_total"'
                            ' class="readonly">{}</div>', formatted)
     total_sum_display.short_description = 'Сумма (руб.)'
 
@@ -190,7 +190,7 @@ class OrderAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
         'user',
         'status',
         'created_at',
-        'total_price',
+        'items_total',
         'get_payment_status',
     )
     list_display_links = ('order_number', 'user',)  # Кликабельные поля
@@ -205,23 +205,31 @@ class OrderAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
                 'user',
                 'created_at',
                 'status',
-                'total_price',
-                'get_payment_status',
                 'comment',
             )
         }),
         ('Параметры доставки', {
             'fields': (
                 'delivery',
+                'delivery_price',
                 'address',
                 'delivery_date',
                 'delivery_time_from',
                 'delivery_time_to',
             )
         }),
+        ('Оплата', {
+            'fields': (
+                'payment_method',
+                'get_payment_status',
+                'items_total',
+                'total_price',
+            )
+        },)
     )
     readonly_fields = (
-        'order_number', 'total_price', 'get_payment_status', 'created_at',
+        'order_number', 'items_total', 'total_price', 'get_payment_status',
+        'created_at', 'delivery_price',
     )
     autocomplete_fields = ('user',)
     inlines = (ProductInOrderInline,)

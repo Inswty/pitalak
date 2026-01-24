@@ -91,7 +91,7 @@ class UserAdmin(BaseUserAdmin):
     @admin.display(description='Сумма заказов')
     def total_cost_orders(self, obj):
         """Подсчёт суммы всех закозов пользователя."""
-        result = obj.orders.aggregate(total=Sum('total_price'))['total']
+        result = obj.orders.aggregate(total=Sum('items_total'))['total']
         if result is None:
             return '0.00 ₽'
         # Округляем до 2 знаков после запятой

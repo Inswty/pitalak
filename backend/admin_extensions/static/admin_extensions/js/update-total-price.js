@@ -12,11 +12,11 @@
         console.log('django.jQuery загружен, инициализация скрипта...');
 
         function findTotalField() {
-            const input = $('#id_total_price');
+            const input = $('#id_items_total');
             if (input.length) return { type: 'input', el: input };
-            const div = $('.field-total_price div.readonly').first();
+            const div = $('.field-items_total div.readonly').first();
             if (div.length) return { type: 'div', el: div };
-            const p = $('.field-total_price p').first();
+            const p = $('.field-items_total p').first();
             if (p.length) return { type: 'p', el: p };
             return null;
         }

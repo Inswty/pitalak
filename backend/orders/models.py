@@ -162,14 +162,22 @@ class Order(models.Model):
         choices=Status.choices,
         default=Status.NEW
     )
-    total_price = models.DecimalField(
-        'Сумма (руб.)',
+    delivery_price = models.DecimalField(
+        'Стоимость доставки (руб.)',
+        max_digits=MAX_PRICE_DIGITS,
+        decimal_places=PRICE_DECIMAL_PLACES,
+        default=Decimal('0.00'),
+        null=True, blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))]
+    )
+    items_total = models.DecimalField(
+        'Сумма товаров (руб.)',
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES,
         default=Decimal('0.00')
     )
-    delivery_price = models.DecimalField(
-        'Стоимость доставкаи (руб.)',
+    total_price = models.DecimalField(
+        'Итого (руб.)',
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES,
         default=Decimal('0.00')
@@ -207,6 +215,10 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         if not self.order_number:
             self.order_number = self.generate_order_number()
+        # Обновляем стоимость доставки и итоговую сумму
+        self.delivery_price = (self.delivery.price if self.delivery
+                               else Decimal('0.00'))
+        self.total_price = self.items_total + self.delivery_price
         super().save(*args, **kwargs)
 
     def add_product(self, product, quantity, price):
@@ -217,15 +229,22 @@ class Order(models.Model):
         if not created:
             item.quantity += quantity
             item.save(update_fields=['quantity'])
-        self.update_total_price()
+        self.recalculate_totals()
         return item
 
-    def update_total_price(self):
-        self.total_price = sum(
+    def recalculate_totals(self):
+        """Пересчитывает суммы заказа: товары, доставка и итого."""
+        self.items_total = sum(
             (item.price * item.quantity for item in self.items.all()),
             start=Decimal('0.00')
         )
-        self.save(update_fields=['total_price'])
+        self.delivery_price = (
+            self.delivery.price if self.delivery else Decimal('0.00')
+        )
+        self.total_price = self.items_total + self.delivery_price
+        self.save(update_fields=[
+            'items_total', 'delivery_price', 'total_price'
+        ])
 
     def generate_order_number(self):
         current_year = timezone.now().year % 100
@@ -291,12 +310,12 @@ class OrderItem(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        self.order.update_total_price()  # пересчёт суммы при изменении
+        self.order.recalculate_totals()  # Пересчёт суммы при изменении
 
     def delete(self, *args, **kwargs):
         order = self.order
         super().delete(*args, **kwargs)
-        order.update_total_price()  # пересчёт суммы при удалении
+        order.recalculate_totals()  # Пересчёт суммы при удалении
 
     class Meta:
         verbose_name = 'Позиция в заказе'
