@@ -14,6 +14,7 @@ from rest_framework_simplejwt.views import (
 )
 
 from orders.models import Delivery, Order, PaymentMethod, ShoppingCart
+from orders.services import OrderService
 from products.models import Category, Product
 from users.otp_manager import OTPManager
 from users.models import User
@@ -358,3 +359,24 @@ class CheckoutViewSet(viewsets.GenericViewSet):
         })
 
         return Response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        """Обрабатывает оформление заказа (checkout)."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            order = OrderService.create_order_for_checkout(
+                request.user, serializer.validated_data
+            )
+        except ValueError as e:  # Ловим ValueError из сервиса
+            return Response(
+                {'detail': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return Response(
+            {
+                'order_id': order.id,
+                'order_number': order.order_number,
+            },
+            status=status.HTTP_201_CREATED
+        )

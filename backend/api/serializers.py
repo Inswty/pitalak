@@ -9,8 +9,7 @@ from rest_framework import serializers
 
 from core.constants import MAX_PRICE_DIGITS, PRICE_DECIMAL_PLACES
 from orders.models import (
-    CartItem, Delivery, Order, OrderItem, Payment,
-    PaymentMethod, ShoppingCart,
+    CartItem, Delivery, Order, OrderItem, PaymentMethod, ShoppingCart,
 )
 from products.models import Category, Ingredient, Product, ProductImage
 from users.models import Address, User
@@ -382,16 +381,18 @@ class OrderListSerializer(serializers.ModelSerializer):
 class OrderDetailSerializer(serializers.ModelSerializer):
     """Сериализатор Detail-заказа пользователя."""
 
+    delivery = serializers.SlugRelatedField(read_only=True, slug_field='name')
     delivery_address = AddressSerializer(source='address', read_only=True)
-    payment_method = PaymentMethodSerializer(read_only=True)
+    payment_method = serializers.SlugRelatedField(read_only=True,
+                                                  slug_field='name')
     items = OrderItemSerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
         fields = (
             'id', 'order_number', 'status', 'comment', 'created_at',
-            'delivery', 'delivery_address', 'items_total', 'payment_method',
-            'items',
+            'delivery', 'delivery_address', 'items_total', 'delivery_price',
+            'total_price', 'payment_method', 'items',
         )
 
 
@@ -408,18 +409,29 @@ class CheckoutReadSerializer(serializers.Serializer):
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES
     )
-    """delivery_price = serializers.DecimalField(
-        max_digits=MAX_PRICE_DIGITS,
-        decimal_places=PRICE_DECIMAL_PLACES
-    )
-    total = serializers.DecimalField(
-        max_digits=MAX_PRICE_DIGITS,
-        decimal_places=PRICE_DECIMAL_PLACES
-    )
-    """
 
 
 class CheckoutWriteSerializer(serializers.Serializer):
-    """Сериализатор для создания заказа (checkout), запись."""
-
-    pass
+    delivery = serializers.PrimaryKeyRelatedField(
+        queryset=Delivery.objects.filter(is_active=True)
+    )
+    payment_method = serializers.PrimaryKeyRelatedField(
+        queryset=PaymentMethod.objects.filter(is_active=True)
+    )
+    address = serializers.PrimaryKeyRelatedField(
+        queryset=Address.objects.all()
+    )
+    comment = serializers.CharField(required=False, allow_blank=True)
+    """
+    delivery_date = serializers.DateField()
+    delivery_time_from = serializers.TimeField(required=False, allow_null=True)
+    delivery_time_to = serializers.TimeField(required=False, allow_null=True)
+    """
+    """
+    def validate(self, data):
+        if data.get('delivery_time_from') and data.get('delivery_time_to'):
+            if data['delivery_time_from'] > data['delivery_time_to']:
+                raise serializers.ValidationError(
+                    "Время 'с' не может быть больше времени 'до'.")
+        return data
+    """
