@@ -353,7 +353,7 @@ class DeliveryRuleAdmin(admin.ModelAdmin):
     )
     list_editable = ('is_active',)
     search_fields = ('name',)
-    ordering = ('time_from',)
+    ordering = ('days_offset', 'time_from')
 
     fieldsets = (
         (None, {

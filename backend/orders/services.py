@@ -77,25 +77,27 @@ class OrderService:
         return order
 
     @classmethod
-    def get_available_delivery_slots(cls, order_created_at):
+    def get_available_delivery_slots(cls, checkout_started_at):
         """
         Возвращает список доступных слотов доставки, сгенерированных на основе
-        активных правил и времени создания заказа.
+        активных правил и текущего времени.
         """
         rules = DeliveryRule.objects.filter(is_active=True)
         slots = []
-        order_time = order_created_at.time()
         for rule in rules:
-            if rule.time_from <= order_time <= rule.time_to:
-                date = (
-                    order_created_at + timedelta(days=rule.days_offset)
-                ).date()
+            if rule.time_from <= checkout_started_at.time() <= rule.time_to:
+                delivery_date = (
+                    checkout_started_at.date()
+                    + timedelta(days=rule.days_offset)
+                )
                 slots.append({
-                    'date': date,
+                    'date': delivery_date,
                     'time_from': rule.delivery_time_from,
                     'time_to': rule.delivery_time_to,
-                    'display': f'{date.strftime('%d.%m')} '
-                               f'{rule.delivery_time_from.strftime('%H:%M')}-'
-                               f'{rule.delivery_time_to.strftime('%H:%M')}'
+                    'display': (
+                        f'{delivery_date.strftime("%d.%m")} '
+                        f'{rule.delivery_time_from.strftime("%H:%M")}-'
+                        f'{rule.delivery_time_to.strftime("%H:%M")}'
+                    ),
                 })
         return slots
