@@ -62,6 +62,9 @@ class OrderService:
                 'address': validated_data['address'],
                 'comment': validated_data.get('comment'),
                 'payment_method': validated_data.get('payment_method'),
+                'delivery_date': validated_data['delivery_date'],
+                'delivery_time_from': validated_data['delivery_time_from'],
+                'delivery_time_to': validated_data['delivery_time_to'],
             }
         )
         # Создаём объект оплаты
@@ -100,4 +103,4 @@ class OrderService:
                         f'{rule.delivery_time_to.strftime("%H:%M")}'
                     ),
                 })
-        return slots
+        return sorted(slots, key=lambda s: (s['date'], s['time_from']))

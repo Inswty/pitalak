@@ -396,13 +396,24 @@ class OrderDetailSerializer(serializers.ModelSerializer):
         )
 
 
+class DeliverySlotSerializer(serializers.Serializer):
+    """Слот доставки (read-only)."""
+
+    date = serializers.DateField()
+    time_from = serializers.TimeField()
+    time_to = serializers.TimeField()
+    display = serializers.CharField()
+
+
 class CheckoutReadSerializer(serializers.Serializer):
     """Сериализатор для оформления заказа (checkout), чтение."""
 
+    checkout_started_at = serializers.DateTimeField()
     addresses = AddressSerializer(many=True)
     items = CartItemSerializer(many=True)
 
     deliveries = DeliverySerializer(many=True)
+    delivery_slots = DeliverySlotSerializer(many=True)
     payment_methods = PaymentMethodSerializer(many=True)
 
     subtotal = serializers.DecimalField(
@@ -412,6 +423,8 @@ class CheckoutReadSerializer(serializers.Serializer):
 
 
 class CheckoutWriteSerializer(serializers.Serializer):
+    """Сериализатор для создания заказа (checkout), запись."""
+
     delivery = serializers.PrimaryKeyRelatedField(
         queryset=Delivery.objects.filter(is_active=True)
     )
@@ -422,16 +435,14 @@ class CheckoutWriteSerializer(serializers.Serializer):
         queryset=Address.objects.all()
     )
     comment = serializers.CharField(required=False, allow_blank=True)
-    """
-    delivery_date = serializers.DateField()
+
+    delivery_date = serializers.DateField(required=False, allow_null=True)
     delivery_time_from = serializers.TimeField(required=False, allow_null=True)
     delivery_time_to = serializers.TimeField(required=False, allow_null=True)
-    """
-    """
+
     def validate(self, data):
         if data.get('delivery_time_from') and data.get('delivery_time_to'):
             if data['delivery_time_from'] > data['delivery_time_to']:
                 raise serializers.ValidationError(
                     "Время 'с' не может быть больше времени 'до'.")
         return data
-    """

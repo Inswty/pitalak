@@ -3,6 +3,7 @@ import json
 import logging
 
 from django.conf import settings
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import Throttled, ValidationError
@@ -307,7 +308,8 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         """Возвращаем заказы только текущего пользователя."""
         return (
-            Order.objects.filter(user=self.request.user).order_by('created_at')
+            Order.objects.filter(user=self.request.user)
+            .order_by('-created_at')
         )
 
     def get_serializer_class(self):
@@ -345,17 +347,23 @@ class CheckoutViewSet(viewsets.GenericViewSet):
             for item in cart.items.all()
         )
 
+        checkout_started_at = timezone.now()
+        slots = OrderService.get_available_delivery_slots(
+            checkout_started_at
+        )
+
         deliveries = Delivery.objects.filter(is_active=True)
         payment_methods = PaymentMethod.objects.filter(is_active=True)
 
         serializer = self.get_serializer({
+            'checkout_started_at': checkout_started_at,
             'addresses': request.user.addresses.all(),
             'items': cart.items.all(),
             'deliveries': deliveries,
+            'delivery_slots': slots,
             'payment_methods': payment_methods,
             'subtotal': subtotal,
             'delivery_price': Decimal('0.00'),
-            'total': subtotal,
         })
 
         return Response(serializer.data)
