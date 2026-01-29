@@ -2,13 +2,12 @@ import logging
 import secrets
 import string
 from typing import Tuple
-from contextlib import contextmanager
 
 from django.conf import settings
-from django_redis import get_redis_connection
 from redis.exceptions import ConnectionError, RedisError
 from rest_framework.exceptions import Throttled
 
+from core.redis_client import RedisClient
 from users.tasks import send_otp_sms_task
 
 
@@ -17,16 +16,6 @@ logger = logging.getLogger(__name__)
 
 class OTPManager:
     """Унифицированный менеджер для работы с OTP и ограничениями."""
-
-    @staticmethod
-    @contextmanager
-    def redis_conn():
-        conn = get_redis_connection('default')
-        try:
-            yield conn
-        except (ConnectionError, RedisError) as e:
-            logger.error('Redis error: %s', e)
-            raise Throttled(detail='Системная ошибка. Попробуйте позже.')
 
     @staticmethod
     def generate_otp() -> str:
@@ -49,7 +38,7 @@ class OTPManager:
     def can_send_otp(cls, phone):
         """Проверка лимита и кулдауна."""
         keys = cls._get_keys(phone)
-        with cls.redis_conn() as conn:
+        with RedisClient.connect() as conn:
             # Атомарно проверяем оба условия
             pipe = conn.pipeline()
             pipe.get(keys['rate'])
@@ -83,7 +72,7 @@ class OTPManager:
     def register_otp_request(cls, phone: str) -> None:
         """Регистрирует отправку OTP (увеличивает счетчики)."""
         keys = cls._get_keys(phone)
-        with cls.redis_conn() as conn:
+        with RedisClient.connect() as conn:
             # Безопасно создаем ключ с TTL, если его нет,
             # Иначе просто увеличиваем
             if not conn.set(keys['rate'], 1, ex=3600, nx=True):
@@ -94,7 +83,7 @@ class OTPManager:
     def save_otp(cls, phone: str, otp: str) -> None:
         """Сохраняет OTP в Redis."""
         keys = cls._get_keys(phone)
-        with cls.redis_conn() as conn:
+        with RedisClient.connect() as conn:
             try:
                 conn.hset(keys['otp'], mapping={'otp': otp, 'attempts': '0'})
                 conn.expire(keys['otp'], settings.OTP_TTL_SECONDS)
@@ -108,7 +97,7 @@ class OTPManager:
     def verify_otp(cls, phone: str, user_otp: str) -> Tuple[bool, str]:
         """Верификация OTP с учетом количества попыток."""
         keys = cls._get_keys(phone)
-        with cls.redis_conn() as conn:
+        with RedisClient.connect() as conn:
             try:
                 if not conn.exists(keys['otp']):
                     logger.warning('OTP не найден или истек для телефона %s',
