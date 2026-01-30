@@ -114,6 +114,8 @@ class Delivery(models.Model):
         default=Decimal('0.00')
     )
     description = models.TextField('Описание')
+    requires_delivery_slot = models.BooleanField('Требуется выбор даты',
+                                                 default=True)
     is_active = models.BooleanField('Активно', default=True)
 
     class Meta:

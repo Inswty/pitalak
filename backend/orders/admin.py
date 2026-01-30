@@ -370,8 +370,9 @@ class DeliveryRuleAdmin(admin.ModelAdmin):
 
 @admin.register(Delivery)
 class DeliveryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price', 'description',)
+    list_display = ('name', 'price', 'description', 'is_active')
     search_fields = ('name',)
+    list_editable = ('is_active',)
     ordering = ('name',)
 
 

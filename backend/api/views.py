@@ -14,6 +14,7 @@ from rest_framework_simplejwt.views import (
     InvalidToken, TokenError, TokenRefreshView
 )
 
+from core.redis_client import RedisClient
 from orders.models import Delivery, Order, PaymentMethod, ShoppingCart
 from orders.services import OrderService
 from products.models import Category, Product
@@ -341,6 +342,7 @@ class CheckoutViewSet(viewsets.GenericViewSet):
     def list(self, request, *args, **kwargs):
         """Получение данных для checkout."""
         cart = self.get_cart()
+        user = self.request.user
 
         subtotal = sum(
             item.product.price * item.quantity
@@ -348,6 +350,16 @@ class CheckoutViewSet(viewsets.GenericViewSet):
         )
 
         checkout_started_at = timezone.now()
+        with RedisClient.connect() as conn:
+            conn.setex(
+                f'checkout:{user.id}', settings.CHECKOUT_TTL_SECONDS,
+                checkout_started_at.isoformat()
+            )
+            logger.info(
+                'Redis: сохранен checkout_started_at для пользователя: '
+                '%s (id=%s), TTL: %s сек', user.phone, user.id,
+                settings.CHECKOUT_TTL_SECONDS
+            )
         slots = OrderService.get_available_delivery_slots(
             checkout_started_at
         )
@@ -385,6 +397,16 @@ class CheckoutViewSet(viewsets.GenericViewSet):
             {
                 'order_id': order.id,
                 'order_number': order.order_number,
+                'total': order.total_price,
+                'delivery': order.delivery.name,
+                'delivery_time_to': (
+                    order.delivery_time_from.strftime('%H:%M')
+                    if order.delivery_time_from else None
+                ),
+                'delivery_time_from': (
+                    order.delivery_time_to.strftime('%H:%M')
+                    if order.delivery_time_to else None
+                ),
             },
             status=status.HTTP_201_CREATED
         )

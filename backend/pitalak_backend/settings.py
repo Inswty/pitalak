@@ -81,6 +81,8 @@ OTP_COOLDOWN_SECONDS = 60  # 1 минута между запросами
 OTP_TEXT = 'Код для входа: {otp}'
 SMS_BALANCE_CACHE_TIMEOUT = 60 * 60 * 24 * 3  # Время кеширования баланса в секундах
 
+CHECKOUT_TTL_SECONDS = 1500  # Checkout TTL
+
 # Cache settings for OTP
 REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
 CACHES = {
