@@ -190,8 +190,8 @@ class OrderAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
         'user',
         'status',
         'created_at',
-        'items_total',
-        'get_payment_status',
+        'total_price',
+        'payment_status',
     )
     list_display_links = ('order_number', 'user',)  # Кликабельные поля
     list_filter = ('status',)
@@ -221,14 +221,14 @@ class OrderAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
         ('Оплата', {
             'fields': (
                 'payment_method',
-                'get_payment_status',
+                'payment_status',
                 'items_total',
                 'total_price',
             )
         },)
     )
     readonly_fields = (
-        'order_number', 'items_total', 'total_price', 'get_payment_status',
+        'order_number', 'items_total', 'total_price', 'payment_status',
         'created_at', 'delivery_price',
     )
     autocomplete_fields = ('user',)
@@ -303,11 +303,11 @@ class OrderAdmin(OrderCartDynamicAdminMixin, admin.ModelAdmin):
         ]
         return JsonResponse(data, safe=False)
 
-    def get_payment_status(self, obj):
-        if hasattr(obj, 'payment') and obj.payment:
-            return obj.payment.status
-        return 'Не оплачен'  # Статус, если платежа нет
-    get_payment_status.short_description = 'Статус оплаты'
+    @admin.display(description='Статус оплаты')
+    def payment_status(self, obj):
+        if payment := getattr(obj, 'payment', None):
+            return payment.get_status_display()
+        return 'Не оплачен'
 
     class Media(OrderCartDynamicAdminMixin.Media):
         js = (OrderCartDynamicAdminMixin.Media.js

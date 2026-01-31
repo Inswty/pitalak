@@ -2,15 +2,19 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 from djoser.serializers import UserCreateSerializer
 from drf_spectacular.utils import extend_schema_field
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from core.constants import MAX_PRICE_DIGITS, PRICE_DECIMAL_PLACES
+from core.redis_client import RedisClient
 from orders.models import (
     CartItem, Delivery, Order, OrderItem, PaymentMethod, ShoppingCart,
 )
+from orders.services import OrderService
 from products.models import Category, Ingredient, Product, ProductImage
 from users.models import Address, User
 
@@ -48,7 +52,7 @@ class OTPVerifySerializer(BaseOTPSerializer):
 
     def validate_otp(self, value):
         if not value.isdigit():
-            raise serializers.ValidationError(
+            raise ValidationError(
                 'OTP должен содержать только цифры.'
             )
         return value
@@ -85,7 +89,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate_phone(self, value):
         if self.instance and self.instance.phone != value:
-            raise serializers.ValidationError(
+            raise ValidationError(
                 'Изменение номера телефона запрещено.'
             )
         return value
@@ -98,7 +102,7 @@ class UserSerializer(serializers.ModelSerializer):
             if address.get('is_primary', False)
         )
         if primary_count > 1:
-            raise serializers.ValidationError(
+            raise ValidationError(
                 'Только один адрес может быть основным.'
             )
         return value
@@ -441,8 +445,49 @@ class CheckoutWriteSerializer(serializers.Serializer):
     delivery_time_to = serializers.TimeField(required=False, allow_null=True)
 
     def validate(self, data):
-        if data.get('delivery_time_from') and data.get('delivery_time_to'):
-            if data['delivery_time_from'] > data['delivery_time_to']:
-                raise serializers.ValidationError(
-                    "Время 'с' не может быть больше времени 'до'.")
+        delivery = data.get('delivery')
+        # Если доставка требует слота
+        if delivery.requires_delivery_slot:
+            if not (
+                data.get('delivery_date') and data.get('delivery_time_from')
+                and data.get('delivery_time_to')
+            ):
+                raise ValidationError(
+                    'Для выбранного способа доставки нужно'
+                    ' указать дату и время.'
+                )
+
+            # 1. Проверка времени "с" и "до"
+            if data.get('delivery_time_from') and data.get('delivery_time_to'):
+                if data['delivery_time_from'] > data['delivery_time_to']:
+                    raise ValidationError(
+                        "Время 'с' не может быть больше времени 'до'."
+                    )
+            user = self.context['request'].user
+
+            # 2. Проверяем наличие checkout_started_at в Redis
+            with RedisClient.connect() as conn:
+                value = conn.get(f'checkout:{user.id}')
+            if not value:
+                raise ValidationError(
+                    'Время оформления заказа - Всё. А давай ещё раз!'
+                )
+
+            checkout_started_at = (
+                timezone.datetime.fromisoformat(value.decode())
+            )
+
+            # 3. Проверка, что выбранный слот доступен
+            available_slots = (
+                OrderService.get_available_delivery_slots(checkout_started_at)
+            )
+            slot_valid = any(
+                s['date'] == data['delivery_date']
+                and s['time_from'] == data['delivery_time_from']
+                and s['time_to'] == data['delivery_time_to']
+                for s in available_slots
+            )
+            if not slot_valid:
+                raise ValidationError('Выбранный слот доставки недоступен.')
+
         return data

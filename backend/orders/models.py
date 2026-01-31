@@ -160,6 +160,7 @@ class Order(models.Model):
     )
     created_at = models.DateTimeField('Создан', auto_now_add=True)
     status = models.CharField(
+        'Статус',
         max_length=20,
         choices=Status.choices,
         default=Status.NEW
