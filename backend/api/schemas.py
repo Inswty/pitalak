@@ -5,9 +5,10 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
 from .serializers import (
-    OrderDetailSerializer, OrderListSerializer, OTPRequestSerializer,
-    OTPVerifySerializer, ProductDetailSerializer, ProductListSerializer,
-    ShoppingCartReadSerializer, ShoppingCartWriteSerializer, UserSerializer
+    CheckoutReadSerializer, CheckoutWriteSerializer, OrderDetailSerializer,
+    OrderListSerializer, OTPRequestSerializer, OTPVerifySerializer,
+    ProductDetailSerializer, ProductListSerializer, ShoppingCartReadSerializer,
+    ShoppingCartWriteSerializer, UserSerializer
 )
 
 
@@ -18,6 +19,15 @@ UNAUTHORIZED_RESPONSE = {
             'detail': serializers.CharField(
                 default='Учетные данные не были предоставлены.'
             )
+        }
+    )
+}
+
+VALIDATION_ERROR = {
+    400: inline_serializer(
+        name='ValidationError',
+        fields={
+            'detail': serializers.CharField()
         }
     )
 }
@@ -57,10 +67,7 @@ otp_view_set_schemas = extend_schema_view(
                         'refresh': serializers.CharField()
                         }
             ),
-            400: inline_serializer(
-                name='ValidationError',
-                fields={'detail': serializers.CharField()}
-            )
+            **VALIDATION_ERROR
         }
     )
 )
@@ -200,5 +207,49 @@ order_view_schema = extend_schema_view(
             'пользователя, включая товары и адрес доставки.'
         ),
         responses={200: OrderDetailSerializer, **UNAUTHORIZED_RESPONSE}
+    ),
+)
+
+checkout_view_schema = extend_schema_view(
+    # GET
+    list=extend_schema(
+        methods=['GET'],
+        operation_id='get_checkout',
+        summary='Получить данные для оформления заказа',
+        tags=['CHECKOUT'],
+        description=(
+            'Возвращает данные для checkout: адреса, товары, способы '
+            'доставки, доступные слоты доставки и способы оплаты.'
+        ),
+        responses={
+            200: CheckoutReadSerializer,
+            **UNAUTHORIZED_RESPONSE
+        }
+    ),
+
+    # POST
+    create=extend_schema(
+        methods=['POST'],
+        operation_id='create_order_from_checkout',
+        summary='Создать заказ',
+        tags=['CHECKOUT'],
+        description=(
+            'Создаёт заказ на основе выбранного способа доставки, '
+            'адреса, оплаты и слота доставки (если требуется).'
+        ),
+        request=CheckoutWriteSerializer,
+        responses={
+            201: inline_serializer(
+                name='CheckoutCreateResponse',
+                fields={
+                    'order_id': serializers.IntegerField(),
+                    'detail': serializers.CharField(
+                        default='Заказ успешно создан.'
+                    )
+                }
+            ),
+            **VALIDATION_ERROR,
+            **UNAUTHORIZED_RESPONSE
+        }
     ),
 )

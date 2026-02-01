@@ -21,9 +21,9 @@ from products.models import Category, Product
 from users.otp_manager import OTPManager
 from users.models import User
 from .schemas import (
-    cart_view_schema, category_view_schema, order_view_schema,
-    otp_view_set_schemas, product_view_schema, token_refresh_schema,
-    user_me_schemas
+    cart_view_schema, category_view_schema, checkout_view_schema,
+    order_view_schema, otp_view_set_schemas, product_view_schema,
+    token_refresh_schema, user_me_schemas
 )
 from .serializers import (
     CategorySerializer, CategoryDetailSerializer, CheckoutReadSerializer,
@@ -319,6 +319,7 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
         return OrderListSerializer
 
 
+@checkout_view_schema
 class CheckoutViewSet(viewsets.GenericViewSet):
     """Энтпойнт для оформления заказа (checkout)."""
 
