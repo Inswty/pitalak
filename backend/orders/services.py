@@ -3,9 +3,8 @@ from decimal import Decimal
 
 from django.db import transaction
 
-from .models import (
-    DeliveryRule, Order, OrderItem, Payment, ShoppingCart,
-)
+from deliveries.models import DeliveryRule
+from .models import Order, OrderItem, Payment, ShoppingCart
 
 
 class OrderService:

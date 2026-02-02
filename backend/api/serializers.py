@@ -11,8 +11,9 @@ from rest_framework.exceptions import ValidationError
 
 from core.constants import MAX_PRICE_DIGITS, PRICE_DECIMAL_PLACES
 from core.redis_client import RedisClient
+from deliveries.models import Delivery
 from orders.models import (
-    CartItem, Delivery, Order, OrderItem, PaymentMethod, ShoppingCart,
+    CartItem, Order, OrderItem, PaymentMethod, ShoppingCart,
 )
 from orders.services import OrderService
 from products.models import Category, Ingredient, Product, ProductImage

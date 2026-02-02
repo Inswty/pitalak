@@ -15,7 +15,8 @@ from rest_framework_simplejwt.views import (
 )
 
 from core.redis_client import RedisClient
-from orders.models import Delivery, Order, PaymentMethod, ShoppingCart
+from deliveries.models import Delivery
+from orders.models import Order, PaymentMethod, ShoppingCart
 from orders.services import OrderService
 from products.models import Category, Product
 from users.otp_manager import OTPManager
