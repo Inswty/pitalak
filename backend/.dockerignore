@@ -3,4 +3,5 @@ logs
 media
 venv
 .env
+.env.prod
 .git
