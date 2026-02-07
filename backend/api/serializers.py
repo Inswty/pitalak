@@ -414,7 +414,6 @@ class CheckoutReadSerializer(serializers.Serializer):
     """Сериализатор для оформления заказа (checkout), чтение."""
 
     checkout_started_at = serializers.DateTimeField()
-    addresses = AddressSerializer(many=True)
     items = CartItemSerializer(many=True)
 
     deliveries = DeliverySerializer(many=True)
@@ -447,6 +446,15 @@ class CheckoutWriteSerializer(serializers.Serializer):
 
     def validate(self, data):
         delivery = data.get('delivery')
+        user = self.context['request'].user
+        address = data.get('address')
+
+        # Проверка владельца адреса
+        if address and address.user != user:
+            raise ValidationError(
+                {'address': 'Адрес не принадлежит пользователю.'}
+            )
+
         # Если доставка требует слота
         if delivery.requires_delivery_slot:
             if not (
@@ -458,27 +466,27 @@ class CheckoutWriteSerializer(serializers.Serializer):
                     ' указать дату и время.'
                 )
 
-            # 1. Проверка времени "с" и "до"
+            # Проверка времени "с" и "до"
             if data.get('delivery_time_from') and data.get('delivery_time_to'):
                 if data['delivery_time_from'] > data['delivery_time_to']:
                     raise ValidationError(
                         "Время 'с' не может быть больше времени 'до'."
                     )
-            user = self.context['request'].user
 
-            # 2. Проверяем наличие checkout_started_at в Redis
+            # Проверяем наличие checkout_started_at в Redis
             with RedisClient.connect() as conn:
                 value = conn.get(f'checkout:{user.id}')
             if not value:
                 raise ValidationError(
-                    'Время оформления заказа - Всё. А давай ещё раз!'
+                    {'session': 'Время оформления заказа - Всё. '
+                     'А давай ещё раз!'}
                 )
 
             checkout_started_at = (
                 timezone.datetime.fromisoformat(value.decode())
             )
 
-            # 3. Проверка, что выбранный слот доступен
+            # Проверка, что выбранный слот доступен
             available_slots = (
                 OrderService.get_available_delivery_slots(checkout_started_at)
             )

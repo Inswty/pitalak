@@ -20,17 +20,17 @@ from orders.models import Order, PaymentMethod, ShoppingCart
 from orders.services import OrderService
 from products.models import Category, Product
 from users.otp_manager import OTPManager
-from users.models import User
+from users.models import Address, User
 from .schemas import (
     cart_view_schema, category_view_schema, checkout_view_schema,
     order_view_schema, otp_view_set_schemas, product_view_schema,
     token_refresh_schema, user_me_schemas
 )
 from .serializers import (
-    CategorySerializer, CategoryDetailSerializer, CheckoutReadSerializer,
-    CheckoutWriteSerializer, OrderDetailSerializer, OrderListSerializer,
-    OTPRequestSerializer, OTPVerifySerializer, ProductListSerializer,
-    ProductDetailSerializer, ShoppingCartReadSerializer,
+    AddressSerializer, CategorySerializer, CategoryDetailSerializer,
+    CheckoutReadSerializer, CheckoutWriteSerializer, OrderDetailSerializer,
+    OrderListSerializer, OTPRequestSerializer, OTPVerifySerializer,
+    ProductListSerializer, ProductDetailSerializer, ShoppingCartReadSerializer,
     ShoppingCartWriteSerializer, UserSerializer
 )
 
@@ -207,6 +207,20 @@ class UserViewSet(viewsets.GenericViewSet):
             return Response(new_data)
 
 
+class AddressViewSet(viewsets.ModelViewSet):
+    """Адреса пользователя."""
+
+    permission_classes = (IsAuthenticated,)
+    serializer_class = AddressSerializer
+    http_method_names = ['get', 'post', 'patch', 'delete']
+
+    def get_queryset(self):
+        return Address.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
 @product_view_schema
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only эндпойнт для Product API (list & retrieve)."""
@@ -371,7 +385,6 @@ class CheckoutViewSet(viewsets.GenericViewSet):
 
         serializer = self.get_serializer({
             'checkout_started_at': checkout_started_at,
-            'addresses': request.user.addresses.all(),
             'items': cart.items.all(),
             'deliveries': deliveries,
             'delivery_slots': slots,
