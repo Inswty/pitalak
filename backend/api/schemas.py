@@ -115,6 +115,39 @@ user_me_schemas = extend_schema_view(
     ]
 )
 
+address_schemas = extend_schema_view(
+    list=extend_schema(
+        operation_id='list_my_addresses',
+        summary='Список адресов пользователя',
+        tags=['USERS'],
+    ),
+    retrieve=extend_schema(
+        operation_id='get_my_address',
+        summary='Получить адрес пользователя',
+        tags=['USERS'],
+    ),
+    create=extend_schema(
+        operation_id='create_my_address',
+        summary='Добавить адрес',
+        tags=['USERS'],
+    ),
+    update=extend_schema(
+        operation_id='update_my_address',
+        summary='Обновить адрес',
+        tags=['USERS'],
+    ),
+    partial_update=extend_schema(
+        operation_id='patch_my_address',
+        summary='Частично обновить адрес',
+        tags=['USERS'],
+    ),
+    destroy=extend_schema(
+        operation_id='delete_my_address',
+        summary='Удалить адрес',
+        tags=['USERS'],
+    ),
+)
+
 category_view_schema = extend_schema_view(
     list=extend_schema(
         operation_id='list_categories',
