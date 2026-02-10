@@ -4,4 +4,5 @@ media
 venv
 .env
 .env.prod
+.env.docker
 .git

@@ -80,13 +80,11 @@ class AddressSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """Сериализатор пользователя с привязанными адресами."""
-
-    addresses = AddressSerializer(many=True, required=False)
+    """Сериализатор пользователя."""
 
     class Meta:
         model = User
-        fields = ('id', 'phone', 'name', 'last_name', 'email', 'addresses')
+        fields = ('id', 'phone', 'name', 'last_name', 'email')
 
     def validate_phone(self, value):
         if self.instance and self.instance.phone != value:
@@ -94,32 +92,6 @@ class UserSerializer(serializers.ModelSerializer):
                 'Изменение номера телефона запрещено.'
             )
         return value
-
-    def validate_addresses(self, value):
-        if not value:
-            return value
-        primary_count = sum(
-            1 for address in value
-            if address.get('is_primary', False)
-        )
-        if primary_count > 1:
-            raise ValidationError(
-                'Только один адрес может быть основным.'
-            )
-        return value
-
-    @transaction.atomic
-    def update(self, instance, validated_data):
-        # Извлекаем данные адресов из пришедшего запроса
-        addresses_data = validated_data.pop('addresses', None)
-        # Обновляем основные поля пользователя
-        instance = super().update(instance, validated_data)
-        # Если адреса переданы, обновляем их
-        if addresses_data is not None:
-            instance.addresses.all().delete()
-            for address_data in addresses_data:
-                Address.objects.create(user=instance, **address_data)
-        return instance
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
