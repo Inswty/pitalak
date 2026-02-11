@@ -67,6 +67,7 @@ class OTPViewSet(viewsets.ViewSet):
         if settings.DEBUG:
             # Отображаем OTP только в режиме разработки
             print(f'DEV MODE: OTP на номер {phone}: {otp}')
+            logger.debug(f'DEV MODE: OTP на номер {phone}: {otp}')
 
         logger.info('Запрос на отправку OTP принят для %s', phone)
         return Response({

@@ -94,6 +94,20 @@ class Address(models.Model):
             ).exclude(pk=self.pk).update(is_primary=False)
         super().save(*args, **kwargs)
 
+    def delete(self, *args, **kwargs):
+        # Сохраняем информацию, был ли удаляемый адрес основным
+        was_primary = self.is_primary
+        super().delete(*args, **kwargs)
+
+        if was_primary:
+            # Оставшиеся адреса пользователя
+            remaining = Address.objects.filter(user=self.user)
+            if remaining.exists():
+                # Делаем последний основным
+                last = remaining.last()
+                last.is_primary = True
+                last.save()
+
     def format_address_display(self):
         """Вспомогательный метод для форматирования адреса."""
         parts = filter(None, [
