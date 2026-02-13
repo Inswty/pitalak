@@ -73,6 +73,9 @@ SMS_PROVIDER_LOGIN = os.getenv('SMS_PROVIDER_LOGIN')
 SMS_PROVIDER_PASSWORD = os.getenv('SMS_PROVIDER_PASSWORD')
 SMS_PROVIDER_SENDER = os.getenv('SMS_PROVIDER_SENDER')
 SMS_PROVIDER_API_URL = os.getenv('SMS_PROVIDER_API_URL')
+MSG_TELEGRAM_API_URL = os.getenv('MSG_TELEGRAM_API_URL')
+MSG_TELEGRAM_API_TOKEN = os.getenv('MSG_TELEGRAM_API_TOKEN')
+MSG_CAN_SEND_ENDPOINT = os.getenv('MSG_CAN_SEND_ENDPOINT')
 
 OTP_LENGTH = 4
 OTP_TTL_SECONDS = 300  # 5 минут
@@ -84,7 +87,7 @@ SMS_BALANCE_CACHE_TIMEOUT = 60 * 60 * 24 * 3  # Время кешировани�
 
 CHECKOUT_TTL_SECONDS = 1500  # Checkout TTL
 
-# Cache settings for OTP
+# Cache settings
 REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
 CACHES = {
     'default': {
@@ -166,12 +169,13 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_PATCH': True,
-    'SERVE_PERMISSIONS': ['rest_framework.permissions.IsAdminUser'],
-    'SERVE_AUTHENTICATION': ['rest_framework.authentication.SessionAuthentication'],
+    # Временно разрешим документацию для всех
+    #'SERVE_PERMISSIONS': ['rest_framework.permissions.IsAdminUser'],
+    #'SERVE_AUTHENTICATION': ['rest_framework.authentication.SessionAuthentication'],
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=180),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=365),
     'ROTATE_REFRESH_TOKENS': True,
 }
@@ -230,9 +234,14 @@ if DEBUG:
                 'formatter': 'verbose',
                 'encoding': 'utf-8',
             },
+            'console': {  # Вывод в консоль
+                'class': 'logging.StreamHandler',
+                'formatter': 'verbose',
+                'level': 'DEBUG',
+            },
         },
         'root': {
-            'handlers': ['file'],
+            'handlers': ['file', 'console'],
             'level': 'DEBUG',
         },
     }
