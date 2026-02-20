@@ -31,6 +31,7 @@ RESTful API для SPA-приложения по продаже полезных
 - Docker / Docker Compose
 - GitHub Actions
 - Certbot
+- Pytest
 
 
 ## Автор:
