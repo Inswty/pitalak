@@ -147,9 +147,9 @@ class Order(models.Model):
         'Стоимость доставки (руб.)',
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES,
-        default=Decimal('0.00'),
         null=True, blank=True,
         validators=[MinValueValidator(Decimal('0.00'))]
+        
     )
     items_total = models.DecimalField(
         'Сумма товаров (руб.)',
@@ -286,7 +286,7 @@ class OrderItem(models.Model):
         'Цена',
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES,
-        validators=[MinValueValidator(0.009)]
+        validators=[MinValueValidator(Decimal('0.01'))],
     )
 
     def save(self, *args, **kwargs):

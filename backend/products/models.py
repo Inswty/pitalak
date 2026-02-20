@@ -20,7 +20,13 @@ class Category(models.Model):
     name = models.CharField(
         'Название', unique=True, max_length=MAX_CHAR_LENGTH
     )
-    slug = models.SlugField('Слаг', unique=True, max_length=MAX_SLUG_LENGTH)
+    slug = models.SlugField(
+        'Слаг',
+        unique=True,
+        max_length=MAX_SLUG_LENGTH,
+        help_text='Разрешены только буквы, цифры, дефисы и подчеркивания.'
+        ' Должен быть уникальным.'
+    )
     is_available = models.BooleanField(
         default=True, verbose_name='Доступен',
         help_text='Снимите галю, чтобы скрыть категорию.')
@@ -48,7 +54,7 @@ class Nutrient(models.Model):
         'РСП', max_digits=6, decimal_places=3, default=Decimal('0.0'),
         null=True, blank=True,
         help_text='Рекомендуемая суточная потребность',
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0.000'))]
     )
 
     def save(self, *args, **kwargs):
@@ -71,15 +77,15 @@ class Ingredient(models.Model):
     )
     proteins = models.DecimalField(
         'Белки', max_digits=5, decimal_places=1, default=Decimal('0.0'),
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0.0'))]
     )
     fats = models.DecimalField(
         'Жиры', max_digits=5, decimal_places=1, default=Decimal('0.0'),
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0.0'))]
     )
     carbs = models.DecimalField(
         'Углеводы', max_digits=5, decimal_places=1, default=Decimal('0.0'),
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0.0'))]
     )
     nutrients = models.ManyToManyField(
         Nutrient,
@@ -131,15 +137,15 @@ class Product(models.Model):
     )
     proteins = models.DecimalField(
         'Белки', max_digits=5, decimal_places=1, default=Decimal('0.0'),
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0.0'))]
     )
     fats = models.DecimalField(
         'Жиры', max_digits=5, decimal_places=1, default=Decimal('0.0'),
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0.0'))]
     )
     carbs = models.DecimalField(
         'Углеводы', max_digits=5, decimal_places=1, default=Decimal('0.0'),
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0.0'))]
     )
     energy_value = models.PositiveIntegerField(
         'Энергетическая ценность, ккал',
@@ -173,8 +179,8 @@ class Product(models.Model):
         'Цена',
         max_digits=MAX_PRICE_DIGITS,
         decimal_places=PRICE_DECIMAL_PLACES,
-        validators=[MinValueValidator(Decimal('0.009'))],
-        default=0.00,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        default=Decimal('0.00'),
         help_text='Цена, руб.'
     )
 
@@ -263,7 +269,7 @@ class IngredientInProduct(models.Model):
         verbose_name='Количество на 100 г. продукта',
         max_digits=6,
         decimal_places=2,
-        validators=(MinValueValidator(0.009),),
+        validators=[MinValueValidator(Decimal('0.01'))],
         help_text='Укажите количество этого ингредиента в граммах'
     )
 
@@ -300,7 +306,7 @@ class NutrientInIngredient(models.Model):
         verbose_name='Количество на 100 г. ингредиента',
         max_digits=6,
         decimal_places=3,
-        validators=(MinValueValidator(0.0009),),
+        validators=[MinValueValidator(Decimal('0.001'))],
         help_text='Количество нутриента на 100 г ингредиента (в граммах)'
     )
 
