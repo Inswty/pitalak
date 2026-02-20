@@ -30,8 +30,12 @@ def get_sms_balance(request):
     if not request.user.is_authenticated:
         return {}
 
-    # Production-логика
-    balance_display = cache.get(SMS_BALANCE_CACHE_KEY)
+    # --- Безопасное чтение из cache ---
+    try:
+        balance_display = cache.get(SMS_BALANCE_CACHE_KEY)
+    except Exception as e:
+        logger.error('Cache GET error: %s', e)
+        balance_display = None
 
     if balance_display is None and SMS_CLIENT:
         logger.info(
@@ -49,11 +53,15 @@ def get_sms_balance(request):
                 balance_display = f'Баланс OTP: {value} {currency}'
 
                 # Кешируем результат
-                cache.set(
-                    SMS_BALANCE_CACHE_KEY,
-                    balance_display,
-                    SMS_BALANCE_CACHE_TIMEOUT
-                )
+                try:
+                    cache.set(
+                        SMS_BALANCE_CACHE_KEY,
+                        balance_display,
+                        SMS_BALANCE_CACHE_TIMEOUT
+                    )
+                except Exception as e:
+                    logger.error('Cache SET error: %s', e)
+
                 logger.info(
                     'Получен баланс от SMS-провадйера: %s', balance_display
                 )
