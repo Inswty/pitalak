@@ -1,6 +1,36 @@
 from decimal import Decimal
+from rest_framework import status
 
 from orders.models import Order, ShoppingCart
+
+
+def test_checkout_get_schema(auth_client, checkout_url):
+    """GET checkout возвращает корректные поля."""
+
+    response = auth_client.get(checkout_url)
+    expected_keys = {
+        'checkout_started_at',
+        'items', 'deliveries',
+        'delivery_slots',
+        'payment_methods',
+        'subtotal'
+    }
+    assert response.status_code == status.HTTP_200_OK
+    assert expected_keys.issubset(response.data.keys())
+
+
+def test_checkout_available_slots_present(
+        auth_client, delivery_rules, checkout_url
+):
+    """Проверка наличия и структуры слотов доставки"""
+
+    response = auth_client.get(checkout_url)
+    assert response.status_code == status.HTTP_200_OK
+    slots = response.data.get('delivery_slots', [])
+    assert len(slots) > 0, 'Слоты не сгенерировались.'
+    assert 'date' in slots[0]
+    assert 'time_from' in slots[0]
+    assert 'time_to' in slots[0]
 
 
 def test_checkout_post_create_order(
@@ -34,7 +64,7 @@ def test_checkout_post_create_order(
     # Создаем заказ
     response = auth_client.post(checkout_url, payload, format='json')
 
-    assert response.status_code == 201
+    assert response.status_code == status.HTTP_201_CREATED
     order_id = response.data['order_id']
     order = Order.objects.get(id=order_id)
     assert order.total_price == Decimal(expected_total)
