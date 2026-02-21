@@ -149,7 +149,7 @@ class Order(models.Model):
         decimal_places=PRICE_DECIMAL_PLACES,
         null=True, blank=True,
         validators=[MinValueValidator(Decimal('0.00'))]
-        
+
     )
     items_total = models.DecimalField(
         'Сумма товаров (руб.)',
