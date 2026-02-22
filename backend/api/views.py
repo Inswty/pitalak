@@ -69,7 +69,7 @@ class OTPViewSet(viewsets.ViewSet):
             print(f'DEV MODE: OTP на номер {phone}: {otp}')
             logger.debug(f'DEV MODE: OTP на номер {phone}: {otp}')
 
-        logger.info('Запрос на отправку OTP принят для %s', phone)
+        logger.info('Запрос OTP отправлен для %s', phone)
         return Response({
             'detail': 'OTP запрошен. Проверьте ваш телефон.',
             'TTL': settings.OTP_TTL_SECONDS

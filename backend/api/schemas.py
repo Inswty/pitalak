@@ -32,6 +32,14 @@ VALIDATION_ERROR = {
     )
 }
 
+OTP_VALIDATION_ERROR = {
+    400: inline_serializer(
+        name='ValidationErrorResponse',
+        fields={'phone': serializers.ListField(
+            child=serializers.CharField())}
+    )
+}
+
 otp_view_set_schemas = extend_schema_view(
     send=extend_schema(
         operation_id='request_otp',
@@ -51,7 +59,8 @@ otp_view_set_schemas = extend_schema_view(
                 name='OTPThrottledResponse',
                 fields={'detail': serializers.CharField(),
                         'wait': serializers.IntegerField()}
-            )
+            ),
+            **OTP_VALIDATION_ERROR
         }
     ),
     verify=extend_schema(
@@ -67,7 +76,7 @@ otp_view_set_schemas = extend_schema_view(
                         'refresh': serializers.CharField()
                         }
             ),
-            **VALIDATION_ERROR
+            **OTP_VALIDATION_ERROR
         }
     )
 )

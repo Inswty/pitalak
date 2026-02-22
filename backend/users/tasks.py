@@ -56,7 +56,7 @@ def send_otp_sms_task(phone: str, otp: str) -> str | None:
 
     if sms_message_id:
         logger.info(
-            'OTP отправка через SMS для %s, message_id=%s',
+            'OTP отправлено через SMS для %s, message_id=%s',
             phone,
             sms_message_id,
         )

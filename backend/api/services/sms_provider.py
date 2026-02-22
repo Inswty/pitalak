@@ -156,7 +156,7 @@ class TelegramClient:
             # 1. Проверка флага ok
             if not data.get('ok'):
                 logger.info(
-                    'Telegram Gateway: отправка не доступна для %s: %s',
+                    'Telegram Gateway: отправка недоступна для %s: %s',
                     phone,
                     data,
                 )
