@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework import status
 
@@ -45,3 +46,62 @@ def test_sent_otp(client, redis_client, otp_send_url, mock_send_sms):
     sent_otp = args[1]
     # Сравниваем с тем, что в Redis
     assert sent_otp == otp_code
+
+
+def test_otp_cooldown_limit(client, otp_send_url, mock_send_sms):
+    """Проверка ограничения по времени между двумя запросами (Cooldown)."""
+
+    # Первый запрос — проходит успешно
+    client.post(otp_send_url, {"phone": USER_PHONE}, format='json')
+
+    # Второй запрос сразу же — должен вернуть 429
+    response = client.post(otp_send_url, {"phone": USER_PHONE}, format='json')
+
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert 'Подождите' in response.data['detail']
+
+
+def test_otp_hourly_rate_limit(
+        client, redis_client, otp_send_url, mock_send_sms
+):
+    """Проверка превышения лимита запроса OTP в час."""
+
+    keys = OTPManager._get_keys(USER_PHONE)
+
+    # Имитируем, израсходованный лимит
+    redis_client.set(keys['rate'], settings.MAX_OTP_REQUESTS_PER_HOUR)
+
+    # Делаем 'лишний' запрос
+    response = client.post(otp_send_url, {"phone": USER_PHONE}, format='json')
+
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert 'Превышен лимит запросов' in response.data['detail']
+
+
+def test_otp_verification_attempts_limit(
+        client, redis_client, otp_send_url, otp_verify_url, mock_send_sms
+):
+    """
+    Тест на защиту от брутфорса:
+    блокировка верификации и очистка кэша после исчерпания попыток.
+    """
+
+    # Создаем OTP
+    client.post(otp_send_url, {"phone": USER_PHONE}, format='json')
+
+    # Шлём неверный код до талого
+    for i in range(settings.MAX_OTP_ATTEMPTS):
+        response = client.post(
+            otp_verify_url,
+            {"phone": USER_PHONE, "otp": "0000"}, format='json'
+        )
+        if i < settings.MAX_OTP_ATTEMPTS - 1:
+            assert response.status_code == status.HTTP_400_BAD_REQUEST
+            assert 'Неверный OTP' in response.data['detail']
+        else:
+            # Последняя попытка
+            assert response.data['detail'] == 'Превышено количество попыток'
+
+    # Ключ должен самоуничтожиться
+    keys = OTPManager._get_keys(USER_PHONE)
+    assert not redis_client.exists(keys['otp'])

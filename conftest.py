@@ -29,13 +29,47 @@ def pytest_sessionstart(session):
         )
 
 
+@pytest.fixture
+def mock_send_sms(mocker):
+    """Мок для асинхронной отправки OTP через Celery."""
+    return mocker.patch('users.tasks.send_otp_sms_task.delay')
+
+
+@pytest.fixture(autouse=True)
+def mock_sms_balance(mocker):
+    """Подменяем метод получения баланса во всех тестах."""
+
+    mock_instance = mocker.patch(
+        'admin_extensions.context_processors.TargetSMSClient'
+    ).return_value
+    mock_instance.get_balance.return_value = (
+        {'money': {'value': '999.99', 'currency': 'RUR'}}
+    )
+    return mock_instance
+
+
+@pytest.fixture
+def redis_client():
+    """Фикстура Redis с очисткой до и после теста."""
+    with RedisClient.connect() as client:
+        # Очищаем Redis перед тестом
+        client.flushdb()
+        yield client
+        # Очищаем Redis после теста
+        client.flushdb()
+
+
 # =================================
 # User fixtures
 # =================================
 @pytest.fixture
 def user(db):
     """Тестовый пользователь."""
-    return User.objects.create_user(phone='+79001234567', name='Pytester')
+    return User.objects.create_user(
+        phone='+79001234567',
+        name='Pytester',
+        email='test@tester.com'
+    )
 
 
 @pytest.fixture
