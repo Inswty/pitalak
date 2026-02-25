@@ -62,8 +62,9 @@ PERMISSIONS_DATA = (
 @pytest.mark.django_db
 @pytest.mark.parametrize('client_name, url_name, expected_status',
                          PERMISSIONS_DATA)
-def test_api_routes_permissions(client_name, url_name, expected_status,
-                                request):
+def test_api_routes_permissions(
+    client_name, url_name, expected_status, request
+):
     """
     Комплексная проверка прав доступа (Аноним vs Авторизованный).
     """

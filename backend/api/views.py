@@ -89,6 +89,8 @@ class OTPViewSet(viewsets.ViewSet):
 
         user = self._get_or_create_user(phone)
         token = self._generate_token(user)
+        user.phone_verified = True
+        user.save(update_fields=['phone_verified'])
         if token:
             logger.info(
                 'JWT Access: сгенерирован и будет отпрален токен для %s',
