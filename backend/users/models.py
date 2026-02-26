@@ -1,4 +1,5 @@
 from django.db import models
+from django.db import transaction
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from phonenumber_field.modelfields import PhoneNumberField
@@ -80,33 +81,38 @@ class Address(models.Model):
     flat = models.CharField('Квартира', max_length=10, blank=True, null=True)
     floor = models.CharField('Этаж', max_length=10, blank=True, null=True)
     added = models.DateTimeField('Добавлен', auto_now_add=True)
-
     is_primary = models.BooleanField("Основной", default=False)
 
     def save(self, *args, **kwargs):
-        # Если ещё нет адресов — этот будет основным
-        if not Address.objects.filter(user=self.user).exists():
-            self.is_primary = True
-        # Если этот адрес отмечается как основной — сбрасываем у остальных
-        if self.is_primary:
-            Address.objects.filter(
-                user=self.user, is_primary=True
-            ).exclude(pk=self.pk).update(is_primary=False)
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            # Если это единственный адрес — он должен быть основным
+            if not (
+                Address.objects.filter(user=self.user)
+                .exclude(pk=self.pk).exists()
+            ):
+                self.is_primary = True
+            # Если этот адрес основной — сбрасываем у остальных
+            if self.is_primary:
+                Address.objects.filter(
+                    user=self.user, is_primary=True
+                ).exclude(pk=self.pk).update(is_primary=False)
+            super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        # Сохраняем информацию, был ли удаляемый адрес основным
-        was_primary = self.is_primary
-        super().delete(*args, **kwargs)
+        with transaction.atomic():
+            user = self.user
+            was_primary = self.is_primary
 
-        if was_primary:
-            # Оставшиеся адреса пользователя
-            remaining = Address.objects.filter(user=self.user)
-            if remaining.exists():
-                # Делаем последний основным
-                last = remaining.last()
-                last.is_primary = True
-                last.save()
+            super().delete(*args, **kwargs)
+
+            if was_primary:
+                new_primary = Address.objects.filter(
+                    user=user
+                ).order_by('-id').first()
+
+                if new_primary:
+                    new_primary.is_primary = True
+                    new_primary.save(update_fields=['is_primary'])
 
     def format_address_display(self):
         """Вспомогательный метод для форматирования адреса."""
@@ -122,7 +128,14 @@ class Address(models.Model):
     class Meta:
         verbose_name = 'Адрес'
         verbose_name_plural = 'Адреса'
-        ordering = ('id',)
+        ordering = ('added',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=models.Q(is_primary=True),
+                name='unique_primary_address_per_user'
+            )  # Гарантия - только 1 primary
+        ]
 
     def __str__(self):
         """Отображение адреса в админке."""
