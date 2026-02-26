@@ -1,4 +1,3 @@
-from decimal import Decimal
 from rest_framework import status
 
 from orders.models import Order, ShoppingCart
@@ -19,8 +18,8 @@ def test_checkout_get_schema(auth_client, checkout_url):
     assert expected_keys.issubset(response.data.keys())
 
 
-def test_checkout_available_slots_present(
-        auth_client, delivery_rules, checkout_url
+def test_checkout_delivery_slots_structure(
+    auth_client, delivery_rules, checkout_url
 ):
     """Проверка наличия и структуры слотов доставки"""
 
@@ -34,18 +33,21 @@ def test_checkout_available_slots_present(
 
 
 def test_checkout_post_create_order(
-        auth_client, user, delivery, payment_method, user_address,
-        delivery_rules, cart_with_items, checkout_url, mock_order_send
+    auth_client, user, delivery, payment_method, user_address,
+    delivery_rules, cart_with_items, checkout_url, mock_order_send
 ):
     """Создание заказа из корзины пользователя."""
+
+    # Количество товаров в корзине перед созданием заказа
+    expected_count = cart_with_items.items.count()
+    # Сохраняем состав корзины до очистки
+    cart_items_snapshot = list(cart_with_items.items.all())
 
     # Сумма товаров в корзине
     expected_total = sum(
         item.product.price * item.quantity
-        for item in cart_with_items.items.all()
+        for item in cart_items_snapshot
     ) + delivery.price
-    # Количество товаров в корзине перед созданием заказа
-    expected_count = cart_with_items.items.count()
 
     # Получаем данные для checkout
     response = auth_client.get(checkout_url)
@@ -67,15 +69,20 @@ def test_checkout_post_create_order(
     assert response.status_code == status.HTTP_201_CREATED
     order_id = response.data['order_id']
     order = Order.objects.get(id=order_id)
-    assert order.total_price == Decimal(expected_total)
+    assert order.total_price == expected_total
     assert order.items.count() == expected_count
+
     # Проверка состава заказа
-    order_items = order.items.all()
-    for cart_item in cart_with_items.items.all():
-        assert order_items.filter(
-            product=cart_item.product,
-            quantity=cart_item.quantity
-        ).exists()
+    expected_map = {
+        item.product_id: (item.quantity, item.product.price)
+        for item in cart_items_snapshot
+    }
+    actual_map = {
+        item.product_id: (item.quantity, item.price)
+        for item in order.items.all()
+    }
+    assert actual_map == expected_map
+
     # Проверим что корзина очищена
     cart = ShoppingCart.objects.get(user=user)
     assert cart.items.count() == 0

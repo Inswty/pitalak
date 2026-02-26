@@ -268,7 +268,7 @@ class CartItemSerializer(serializers.ModelSerializer):
         model = CartItem
         fields = ('id', 'product_id', 'name', 'price', 'quantity', 'summ')
 
-    def get_summ(self, obj):
+    def get_summ(self, obj) -> Decimal:
         return obj.product.price * obj.quantity
 
 
@@ -282,7 +282,7 @@ class ShoppingCartReadSerializer(serializers.ModelSerializer):
         model = ShoppingCart
         fields = ('items', 'items_total')
 
-    def get_items_total(self, obj):
+    def get_items_total(self, obj) -> Decimal:
         return sum(
             item.product.price * item.quantity for item in obj.items.all()
         )
@@ -299,6 +299,7 @@ class CartItemWriteSerializer(serializers.Serializer):
 
 
 class ShoppingCartWriteSerializer(serializers.Serializer):
+    """Сериализатор для обновления содержимого корзины."""
 
     items = CartItemWriteSerializer(many=True)
 
