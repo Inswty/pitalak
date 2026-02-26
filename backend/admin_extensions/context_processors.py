@@ -11,12 +11,6 @@ SMS_BALANCE_CACHE_TIMEOUT = getattr(
     settings, 'SMS_BALANCE_CACHE_TIMEOUT'
 )
 
-try:
-    SMS_CLIENT = TargetSMSClient()
-except Exception as e:
-    SMS_CLIENT = None
-    logger.error('Не удалось инициализировать TargetSMSClient: %s', e)
-
 
 def get_sms_balance(request):
     """
@@ -37,12 +31,18 @@ def get_sms_balance(request):
         logger.error('Cache GET error: %s', e)
         balance_display = None
 
-    if balance_display is None and SMS_CLIENT:
+    try:
+        sms_client = TargetSMSClient()
+    except Exception as e:
+        sms_client = None
+        logger.error('Не удалось инициализировать TargetSMSClient: %s', e)
+
+    if balance_display is None and sms_client:
         logger.info(
             'Кеш баланса SMS пуст. Выполняется синхронный запрос к провайдеру.'
         )
         try:
-            data = SMS_CLIENT.get_balance()
+            data = sms_client.get_balance()
             if data is None:
                 balance_display = 'Баланс OTP: Пустой ответ провайдера'
             elif 'error' in data:
@@ -75,7 +75,7 @@ def get_sms_balance(request):
             )
             logger.error('Критическая ошибка при запросе баланса: %s', e)
 
-    elif not SMS_CLIENT:
+    elif not sms_client:
         balance_display = 'Баланс: Клиент недоступен (ошибка инициализации)'
         logger.warning('Баланс: Клиент недоступен (ошибка инициализации)')
 
