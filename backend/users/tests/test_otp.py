@@ -223,7 +223,7 @@ def test_otp_expired_code(
 
 @pytest.mark.django_db
 def test_otp_verification_creates_new_user(auth_otp_flow):
-    '''Проверка создания пользователя после успешной верификации.'''
+    """Проверка создания пользователя после успешной верификации."""
 
     # Убеждаемся, что юзера с таким номером НЕТ в базе
     assert not User.objects.filter(phone=USER_PHONE).exists()
@@ -238,10 +238,10 @@ def test_otp_verification_creates_new_user(auth_otp_flow):
 
 @pytest.mark.django_db
 def test_otp_verification_existing_user(auth_otp_flow):
-    '''
+    """
     Проверка, что для существующего юзера
     не создается дубликат и выдаются токены.
-    '''
+    """
 
     # Заранее создаем юзера в базе
     from django.contrib.auth import get_user_model

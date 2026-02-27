@@ -1,9 +1,14 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.urls import reverse
+from rest_framework import status
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.test import APIClient
 
+
 from backend.core.redis_client import RedisClient
+from backend.users.otp_manager import OTPManager
+
 
 User = get_user_model()
 
@@ -23,7 +28,6 @@ def pytest_sessionstart(session):
             + f'\n[ОШИБКА] Redis не доступен: {e}\n'
             '\nДля работы тестов нужен запущенный Redis-сервер.'
             '\nПодсказка: docker run -d -p 6379:6379 redis'
-            '\nили локально: \\Redis-x64-5.0.14.1\\redis-server.exe'
             '\n' + '=' * 50 + '\n',
             returncode=1
         )
@@ -59,6 +63,32 @@ def redis_client():
         client.flushdb()
 
 
+@pytest.fixture
+def auth_otp_flow(
+    client, otp_send_url, otp_verify_url, redis_client, mock_send_sms
+):
+    """Фикстура-фабрика: возвращает функцию полного цикла OTP-авторизации."""
+    def _flow(phone: str):
+        # Запрашиваем код
+        send_res = client.post(otp_send_url, {"phone": phone}, format='json')
+        assert send_res.status_code == status.HTTP_200_OK, \
+            f'Ошибка при отправке OTP: {send_res.data}'
+
+        # Достаем код из Redis через менеджер
+        keys = OTPManager._get_keys(phone)
+        otp_data = redis_client.hgetall(keys['otp'])
+
+        correct_code = otp_data.get(b'otp').decode()
+
+        # Возвращаем результат верификации
+        return client.post(
+            otp_verify_url,
+            {"phone": phone, "otp": correct_code},
+            format='json'
+        )
+    return _flow
+
+
 # =================================
 # User fixtures
 # =================================
@@ -84,3 +114,16 @@ def auth_client(user):
     # Передаём токен в заголовок
     client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
     return client
+
+
+# =================================
+# URL fixtures
+# =================================
+@pytest.fixture
+def otp_send_url():
+    return reverse('api:otp-send')
+
+
+@pytest.fixture
+def otp_verify_url():
+    return reverse('api:otp-verify')

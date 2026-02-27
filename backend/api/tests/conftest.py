@@ -60,7 +60,9 @@ def user_address(user):
         user=user,
         locality='Бобруйск',
         street='Ромашковая',
-        house='77'
+        house='88',
+        flat='5',
+        floor='1'
     )
 
 
@@ -101,3 +103,13 @@ def checkout_url():
 @pytest.fixture
 def address_url():
     return reverse('api:addresses-list')
+
+
+@pytest.fixture
+def users_me_url():
+    return reverse('api:users-me')
+
+
+@pytest.fixture
+def token_refresh():
+    return reverse('api:token_refresh')
