@@ -18,4 +18,6 @@ def update_product_after_saved(sender, instance, **kwargs):
 @receiver(post_save, sender=Ingredient)
 def update_all_product_with_change_ingredient(sender, instance, **kwargs):
     """При изменении ингредиента — обновить все связанные продукты."""
-    ProductService.recalc_all_products_using_ingredient(instance)
+    ProductService.recalc_all_products_using_ingredient(
+        instance, reason='ingredient saved'
+    )

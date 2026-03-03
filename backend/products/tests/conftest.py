@@ -2,7 +2,29 @@ from decimal import Decimal
 
 import pytest
 
-from products.models import Ingredient, Nutrient, Product
+from products.models import Category, Ingredient, Nutrient, Product
+
+
+@pytest.fixture()
+def force_on_commit_execution(monkeypatch):
+    """
+    Принудительно выполняет callback-функции transaction.on_commit немедленно.
+
+    В pytest тесты по умолчанию оборачиваются в транзакцию, которая никогда
+    не фиксируется (rollback), из-за чего обработчики on_commit не запускаются.
+    Фикстура подменяет механизм коммита для тестирования логики ProductService.
+    """
+    def immediate(func):
+        return func()
+    monkeypatch.setattr('products.services.transaction.on_commit', immediate)
+
+
+@pytest.fixture
+def category(db):
+    return Category.objects.create(
+        name='Полезное',
+        slug='healthy'
+    )
 
 
 @pytest.fixture

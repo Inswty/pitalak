@@ -71,10 +71,16 @@ class ProductService:
             )
 
     @staticmethod
-    def recalc_all_products_using_ingredient(ingredient):
+    def recalc_all_products_using_ingredient(ingredient, reason=None):
         """
         Пересчитывает PFC для всех продуктов, использующих данный ингредиент.
         """
+        logger.info(
+            'Ингредиент "%s" обновлен, пересчёт PFC для всех продуктов'
+            ' (reason=%s)',
+            ingredient.name,
+            reason,
+        )
         # Находим все продукты, где используется этот ингредиент
         products = (
             Product.objects.filter(product_ingredients__ingredient=ingredient)

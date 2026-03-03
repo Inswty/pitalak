@@ -212,12 +212,12 @@ class Product(models.Model):
                         proteins += ingredient.proteins * ratio
                         fats += ingredient.fats * ratio
                         carbs += ingredient.carbs * ratio
-                    # Округляем до 2 знаков после запятой
-                    self.proteins = proteins.quantize(Decimal('0.01'),
+                    # Округляем до 1 знаков после запятой
+                    self.proteins = proteins.quantize(Decimal('0.1'),
                                                       rounding=ROUND_HALF_UP)
-                    self.fats = fats.quantize(Decimal('0.01'),
+                    self.fats = fats.quantize(Decimal('0.1'),
                                               rounding=ROUND_HALF_UP)
-                    self.carbs = carbs.quantize(Decimal('0.01'),
+                    self.carbs = carbs.quantize(Decimal('0.1'),
                                                 rounding=ROUND_HALF_UP)
                     logger.info('Рассчитаны PFC для продукта'
                                 ' "%s"', self.name)
