@@ -111,5 +111,5 @@ def users_me_url():
 
 
 @pytest.fixture
-def token_refresh():
+def token_refresh_url():
     return reverse('api:token_refresh')
