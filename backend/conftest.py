@@ -1,3 +1,6 @@
+from datetime import time
+from decimal import Decimal
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -6,8 +9,10 @@ from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.test import APIClient
 
 
-from backend.core.redis_client import RedisClient
-from backend.users.otp_manager import OTPManager
+from core.redis_client import RedisClient
+from deliveries.models import DeliveryRule
+from products.models import Category, Product
+from users.otp_manager import OTPManager
 
 
 User = get_user_model()
@@ -89,6 +94,20 @@ def auth_otp_flow(
     return _flow
 
 
+@pytest.fixture
+def delivery_rule(db):
+    """Фикстура для одного стандартного правила."""
+    return DeliveryRule.objects.create(
+        name='Заказ с 00:00 до 23:59',
+        time_from=time(0, 0),
+        time_to=time(23, 59),
+        days_offset=2,
+        delivery_time_from=time(18, 0),
+        delivery_time_to=time(21, 0),
+        is_active=True
+    )
+
+
 # =================================
 # User fixtures
 # =================================
@@ -114,6 +133,43 @@ def auth_client(user):
     # Передаём токен в заголовок
     client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
     return client
+
+
+# =================================
+# Product fixtures
+# =================================
+
+@pytest.fixture
+def category(db):
+    return Category.objects.create(
+        name='Полезное',
+        slug='healthy'
+    )
+
+
+@pytest.fixture
+def product_auto(category):
+    """Заготовка продукта в режиме AUTO."""
+    return Product.objects.create(
+        name='Конфета AUTO',
+        category=category,
+        nutrition_mode=Product.NutritionMode.AUTO,
+        price=Decimal('100.00')
+    )
+
+
+@pytest.fixture
+def product_manual(category):
+    """Заготовка продукта в режиме MANUAL."""
+    return Product.objects.create(
+        name='Конфета MANUAL',
+        category=category,
+        nutrition_mode=Product.NutritionMode.MANUAL,
+        price=Decimal('100.00'),
+        proteins=Decimal('5.0'),
+        fats=Decimal('1.0'),
+        carbs=Decimal('80.0')
+    )
 
 
 # =================================

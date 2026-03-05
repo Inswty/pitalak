@@ -16,6 +16,7 @@ from rest_framework_simplejwt.views import (
 
 from core.redis_client import RedisClient
 from deliveries.models import Delivery
+from deliveries.services import get_available_delivery_slots
 from orders.models import Order, PaymentMethod, ShoppingCart
 from orders.services import OrderService
 from products.models import Category, Product
@@ -380,7 +381,7 @@ class CheckoutViewSet(viewsets.GenericViewSet):
                 '%s (id=%s), TTL: %s сек', user.phone, user.id,
                 settings.CHECKOUT_TTL_SECONDS
             )
-        slots = OrderService.get_available_delivery_slots(
+        slots = get_available_delivery_slots(
             checkout_started_at
         )
 

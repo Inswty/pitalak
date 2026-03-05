@@ -12,10 +12,10 @@ from rest_framework.exceptions import ValidationError
 from core.constants import MAX_PRICE_DIGITS, PRICE_DECIMAL_PLACES
 from core.redis_client import RedisClient
 from deliveries.models import Delivery
+from deliveries.services import get_available_delivery_slots
 from orders.models import (
     CartItem, Order, OrderItem, PaymentMethod, ShoppingCart,
 )
-from orders.services import OrderService
 from products.models import Category, Ingredient, Product, ProductImage
 from users.models import Address, User
 
@@ -461,7 +461,7 @@ class CheckoutWriteSerializer(serializers.Serializer):
 
             # Проверка, что выбранный слот доступен
             available_slots = (
-                OrderService.get_available_delivery_slots(checkout_started_at)
+                get_available_delivery_slots(checkout_started_at)
             )
             slot_valid = any(
                 s['date'] == data['delivery_date']

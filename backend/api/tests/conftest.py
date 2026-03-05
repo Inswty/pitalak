@@ -1,7 +1,11 @@
 import pytest
 from django.urls import reverse
+from freezegun import freeze_time
+from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework.test import APIClient
 
-from deliveries.models import Delivery, DeliveryRule
+
+from deliveries.models import Delivery
 from orders.models import CartItem, PaymentMethod, ShoppingCart
 from products.models import Category, Product
 from users.models import Address
@@ -72,18 +76,6 @@ def delivery():
         name='Катапульта',
         description='Airways',
         price=500
-    )
-
-
-@pytest.fixture
-def delivery_rules(db):
-    return DeliveryRule.objects.create(
-        name='Заказ с 00:00 до 23:59',
-        time_from='00:00',
-        time_to='23:59',
-        days_offset=2,
-        delivery_time_from='18:00',
-        delivery_time_to='21:00',
     )
 
 

@@ -33,7 +33,7 @@ class DeliveryRule(models.Model):
     Правило генерации слотов доставки в зависимости от времени создания заказа.
     """
 
-    name = models.CharField('Название правила', max_length=255,)
+    name = models.CharField('Название правила', max_length=255)
     time_from = models.TimeField('Начало периода заказа')
     time_to = models.TimeField('Конец периода заказа')
     days_offset = models.PositiveIntegerField('Сдвиг по дням')
