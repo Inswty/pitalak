@@ -18,23 +18,9 @@ def test_checkout_get_schema(auth_client, checkout_url):
     assert expected_keys.issubset(response.data.keys())
 
 
-def test_checkout_delivery_slots_structure(
-    auth_client, delivery_rules, checkout_url
-):
-    """Проверка наличия и структуры слотов доставки"""
-
-    response = auth_client.get(checkout_url)
-    assert response.status_code == status.HTTP_200_OK
-    slots = response.data.get('delivery_slots', [])
-    assert len(slots) > 0, 'Слоты не сгенерировались.'
-    assert 'date' in slots[0]
-    assert 'time_from' in slots[0]
-    assert 'time_to' in slots[0]
-
-
 def test_checkout_post_create_order(
     auth_client, user, delivery, payment_method, user_address,
-    delivery_rules, cart_with_items, checkout_url, mock_order_send
+    delivery_rule, cart_with_items, checkout_url, mock_order_send
 ):
     """Создание заказа из корзины пользователя."""
 

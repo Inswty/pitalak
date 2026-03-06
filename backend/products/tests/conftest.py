@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import pytest
 
-from products.models import Category, Ingredient, Nutrient, Product
+from products.models import Ingredient, Nutrient
 
 
 @pytest.fixture()
@@ -17,39 +17,6 @@ def force_on_commit_execution(monkeypatch):
     def immediate(func):
         return func()
     monkeypatch.setattr('products.services.transaction.on_commit', immediate)
-
-
-@pytest.fixture
-def category(db):
-    return Category.objects.create(
-        name='Полезное',
-        slug='healthy'
-    )
-
-
-@pytest.fixture
-def product_auto(category):
-    """Заготовка продукта в режиме AUTO."""
-    return Product.objects.create(
-        name='Конфета AUTO',
-        category=category,
-        nutrition_mode=Product.NutritionMode.AUTO,
-        price=Decimal('100.00')
-    )
-
-
-@pytest.fixture
-def product_manual(category):
-    """Заготовка продукта в режиме MANUAL."""
-    return Product.objects.create(
-        name='Конфета MANUAL',
-        category=category,
-        nutrition_mode=Product.NutritionMode.MANUAL,
-        price=Decimal('100.00'),
-        proteins=Decimal('5.0'),
-        fats=Decimal('1.0'),
-        carbs=Decimal('80.0')
-    )
 
 
 @pytest.fixture
